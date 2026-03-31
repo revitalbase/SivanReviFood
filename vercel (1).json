@@ -1,0 +1,9 @@
+{
+  "version": 2,
+  "routes": [
+    { "src": "/api/claude", "dest": "/api/claude.js" },
+    { "src": "/api/config", "dest": "/api/config.js" },
+    { "src": "/api/thumb",  "dest": "/api/thumb.js"  },
+    { "src": "/(.*)", "dest": "/index.html" }
+  ]
+}

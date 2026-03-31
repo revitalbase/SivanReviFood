@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sivan & Revi — המטבח שלנו</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=Heebo:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+/* ═══════════════════════════════════════════
+   🌹 SIVAN & REVI — TEMPLATE
+   כדי לשנות תמונת hero: חפש HERO_IMAGE_URL
+   ═══════════════════════════════════════════ */
+
+:root {
+  --gold: #c9a96e;
+  --gold-dark: #b8935a;
+  --dark: #1a1a1a;
+  --cream: #faf8f5;
+  --border: #e8e0d8;
+}
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: 'Heebo', sans-serif; background: var(--cream); color: var(--dark); }
+
+/* NAV */
+.nav { background: #fff; padding: 18px 40px; display: flex; align-items: center; justify-content: space-between; border-bottom: 0.5px solid var(--border); position: sticky; top: 0; z-index: 100; }
+.nav-logo { font-family: 'Playfair Display', serif; font-size: 20px; direction: ltr; }
+.nav-logo span { color: var(--gold); font-style: italic; }
+.nav-links { display: flex; gap: 28px; font-size: 13px; }
+.nav-links a { text-decoration: none; color: #666; transition: .2s; }
+.nav-links a:hover { color: var(--gold); }
+.nav-btn { background: var(--dark); color: #fff; border: none; padding: 9px 20px; font-family: 'Heebo', sans-serif; font-size: 12px; cursor: pointer; }
+
+/* HERO — שני תמונה כאן ↓ */
+.hero {
+  position: relative;
+  height: 520px;
+  display: flex;
+  align-items: center;
+  overflow: hidden;
+}
+.hero-img {
+  position: absolute;
+  inset: 0;
+  /* ↓↓↓ החליפי את הכתובת הזו בלינק של התמונה שלך ↓↓↓ */
+  background-image: url('HERO_IMAGE_URL');
+  /* ↑↑↑ לדוגמה: url('https://imgur.com/abc123.jpg') ↑↑↑ */
+  background-size: cover;
+  background-position: center;
+}
+.hero-overlay { position: absolute; inset: 0; background: linear-gradient(to left, rgba(10,6,2,0.85) 0%, rgba(10,6,2,0.5) 55%, rgba(10,6,2,0.1) 100%); }
+.hero-content { position: relative; z-index: 1; padding: 0 60px; max-width: 580px; direction: ltr; }
+.hero-tag { font-size: 11px; letter-spacing: 3px; color: var(--gold); text-transform: uppercase; margin-bottom: 18px; font-weight: 300; font-family: 'Heebo', sans-serif; }
+.hero-title { font-family: 'Playfair Display', serif; font-size: 52px; color: #fff; line-height: 1.15; margin-bottom: 18px; }
+.hero-title em { color: var(--gold); font-style: italic; }
+.hero-sub { font-size: 14px; color: rgba(255,255,255,.55); line-height: 1.8; margin-bottom: 30px; font-weight: 300; font-family: 'Heebo', sans-serif; }
+.hero-cta { background: var(--gold); color: #fff; border: none; padding: 13px 34px; font-family: 'Heebo', sans-serif; font-size: 13px; cursor: pointer; transition: .2s; }
+.hero-cta:hover { background: var(--gold-dark); }
+.hero-sig { position: absolute; bottom: 26px; left: 60px; font-size: 11px; color: rgba(255,255,255,.4); letter-spacing: 1.5px; font-family: 'Heebo', sans-serif; }
+
+/* RECIPES GRID */
+.section { padding: 52px 40px; }
+.section-header { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 36px; }
+.section-title { font-family: 'Playfair Display', serif; font-size: 28px; }
+.section-title em { color: var(--gold); font-style: italic; }
+.section-link { font-size: 12px; color: var(--gold); text-decoration: none; }
+.grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; }
+.card { background: #fff; border: 0.5px solid var(--border); overflow: hidden; cursor: pointer; transition: .25s; }
+.card:hover { transform: translateY(-3px); }
+.card-img { height: 200px; position: relative; overflow: hidden; }
+.card-img img { width: 100%; height: 100%; object-fit: cover; display: block; transition: .35s; }
+.card:hover .card-img img { transform: scale(1.04); }
+.card-accent { position: absolute; bottom: 0; left: 0; right: 0; height: 3px; background: var(--gold); }
+.card-body { padding: 18px; }
+.card-cat { font-size: 10px; letter-spacing: 2px; color: var(--gold); margin-bottom: 8px; font-weight: 500; }
+.card-title { font-family: 'Playfair Display', serif; font-size: 16px; line-height: 1.4; margin-bottom: 10px; }
+.card-meta { display: flex; align-items: center; justify-content: space-between; }
+.card-stars { color: var(--gold); font-size: 12px; }
+.card-who { font-size: 11px; color: #aaa; }
+
+/* FEATURE SECTION */
+.feature { background: var(--dark); padding: 52px 40px; display: grid; grid-template-columns: 1fr 1fr; gap: 48px; align-items: center; }
+.feature-img { height: 300px; overflow: hidden; }
+.feature-img img { width: 100%; height: 100%; object-fit: cover; opacity: .85; }
+.feature-content { color: #fff; }
+.feature-tag { font-size: 10px; letter-spacing: 3px; color: var(--gold); text-transform: uppercase; margin-bottom: 14px; font-weight: 300; }
+.feature-title { font-family: 'Playfair Display', serif; font-size: 30px; line-height: 1.3; margin-bottom: 16px; }
+.feature-title em { color: var(--gold); font-style: italic; }
+.feature-text { font-size: 13px; color: rgba(255,255,255,.5); line-height: 1.9; margin-bottom: 26px; font-weight: 300; }
+.feature-btn { background: none; border: 1px solid var(--gold); color: var(--gold); padding: 11px 28px; font-size: 12px; font-family: 'Heebo', sans-serif; cursor: pointer; transition: .2s; }
+.feature-btn:hover { background: var(--gold); color: #fff; }
+
+/* LOVE STRIP */
+.love-strip { background: var(--gold); padding: 24px 40px; display: flex; align-items: center; justify-content: center; gap: 24px; flex-wrap: wrap; }
+.love-strip-text { font-family: 'Playfair Display', serif; font-size: 17px; color: #fff; font-style: italic; }
+.love-strip-dot { width: 4px; height: 4px; background: rgba(255,255,255,.5); border-radius: 50%; flex-shrink: 0; }
+
+/* FOOTER */
+.footer-bar { background: #fff; border-top: 0.5px solid var(--border); padding: 22px 40px; display: flex; align-items: center; justify-content: space-between; }
+.footer-logo { font-family: 'Playfair Display', serif; font-size: 15px; color: #888; direction: ltr; }
+.footer-logo span { color: var(--gold); font-style: italic; }
+.footer-heart { font-size: 12px; color: var(--gold); }
+
+@media(max-width: 768px) {
+  .nav { padding: 14px 20px; }
+  .nav-links { display: none; }
+  .hero { height: 420px; }
+  .hero-content { padding: 0 24px; }
+  .hero-title { font-size: 36px; }
+  .section { padding: 36px 20px; }
+  .grid { grid-template-columns: 1fr; }
+  .feature { grid-template-columns: 1fr; padding: 36px 20px; }
+  .love-strip { padding: 20px; text-align: center; }
+  .footer-bar { padding: 18px 20px; flex-direction: column; gap: 8px; }
+}
+</style>
+</head>
+<body>
+
+<nav class="nav">
+  <div class="nav-logo">Sivan <span>&</span> Revi</div>
+  <div class="nav-links">
+    <a href="#">המתכונים שלנו</a>
+    <a href="#">קטגוריות</a>
+    <a href="#">מועדפים</a>
+  </div>
+  <button class="nav-btn">+ הוסיפי מתכון</button>
+</nav>
+
+<div class="hero">
+  <div class="hero-img"></div>
+  <div class="hero-overlay"></div>
+  <div class="hero-content">
+    <div class="hero-tag">Our kitchen, our love</div>
+    <h1 class="hero-title">Cooking together<br>is <em>love</em> made<br>visible</h1>
+    <p class="hero-sub">A private collection of recipes we love, discovered and made together.</p>
+    <button class="hero-cta">לכל המתכונים שלנו</button>
+  </div>
+  <div class="hero-sig">סיון ורוי — מבשלות באהבה ♥</div>
+</div>
+
+<div class="section" style="background: var(--cream)">
+  <div class="section-header">
+    <h2 class="section-title">המתכונים <em>האחרונים</em> שלנו</h2>
+    <a class="section-link" href="#">לכל המתכונים ←</a>
+  </div>
+  <div class="grid">
+    <div class="card">
+      <div class="card-img">
+        <!-- החליפי את הלינק בתמונת מתכון אמיתית -->
+        <img src="https://images.unsplash.com/photo-1473093295043-cdd812d0e601?w=400&q=80" />
+        <div class="card-accent"></div>
+      </div>
+      <div class="card-body">
+        <div class="card-cat">פסטה</div>
+        <div class="card-title">פסטה קרמית עם שום וגבינת פרמזן</div>
+        <div class="card-meta">
+          <div class="card-stars">★★★★☆</div>
+          <div class="card-who">סיון</div>
+        </div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-img">
+        <img src="https://images.unsplash.com/photo-1540189549336-e6e99c3679fe?w=400&q=80" />
+        <div class="card-accent"></div>
+      </div>
+      <div class="card-body">
+        <div class="card-cat">סלט</div>
+        <div class="card-title">קערת ים תיכון טרייה</div>
+        <div class="card-meta">
+          <div class="card-stars">★★★★★</div>
+          <div class="card-who">רוי</div>
+        </div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-img">
+        <img src="https://images.unsplash.com/photo-1565958011703-44f9829ba187?w=400&q=80" />
+        <div class="card-accent"></div>
+      </div>
+      <div class="card-body">
+        <div class="card-cat">קינוח</div>
+        <div class="card-title">עוגת שוקולד נזיל לשתיים</div>
+        <div class="card-meta">
+          <div class="card-stars">★★★★★</div>
+          <div class="card-who">ביחד ♥</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="feature">
+  <div class="feature-content">
+    <div class="feature-tag">מתכון השבוע</div>
+    <h2 class="feature-title">מנה שגרמה לנו<br>להתאהב <em>מחדש</em></h2>
+    <p class="feature-text">כל מתכון כאן הוא זיכרון. ערב שישי, יום ראשון עצלן, רגע מיוחד שרצינו לשמור לנצח.</p>
+    <button class="feature-btn">לצפייה במתכון</button>
+  </div>
+  <div class="feature-img">
+    <img src="https://images.unsplash.com/photo-1414235077428-338989a2e8c0?w=600&q=80" />
+  </div>
+</div>
+
+<div class="love-strip">
+  <div class="love-strip-text">כי הדרך הכי טובה לאהוב מישהי</div>
+  <div class="love-strip-dot"></div>
+  <div class="love-strip-text">היא לבשל בשבילה</div>
+  <div class="love-strip-dot"></div>
+  <div class="love-strip-text">ויחד — עוד יותר טוב</div>
+</div>
+
+<div class="footer-bar">
+  <div class="footer-logo">Sivan <span>&</span> Revi — המטבח שלנו</div>
+  <div class="footer-heart">עשוי באהבה ♥</div>
+</div>
+
+</body>
+</html>
