@@ -6,11 +6,6 @@
 <title>Sivan & Revi — המטבח שלנו</title>
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=Heebo:wght@300;400;500&display=swap" rel="stylesheet">
 <style>
-/* ═══════════════════════════════════════════
-   🌹 SIVAN & REVI — TEMPLATE
-   כדי לשנות תמונת hero: חפש HERO_IMAGE_URL
-   ═══════════════════════════════════════════ */
-
 :root {
   --gold: #c9a96e;
   --gold-dark: #b8935a;
@@ -30,23 +25,77 @@ body { font-family: 'Heebo', sans-serif; background: var(--cream); color: var(--
 .nav-links a:hover { color: var(--gold); }
 .nav-btn { background: var(--dark); color: #fff; border: none; padding: 9px 20px; font-family: 'Heebo', sans-serif; font-size: 12px; cursor: pointer; }
 
-/* HERO — שני תמונה כאן ↓ */
-.hero {
-  position: relative;
-  height: 520px;
-  display: flex;
-  align-items: center;
-  overflow: hidden;
+/* EDIT MODE BUTTON */
+.edit-toggle {
+  position: fixed; bottom: 24px; left: 24px; z-index: 9999;
+  background: var(--gold); color: #fff; border: none;
+  padding: 12px 20px; border-radius: 50px;
+  font-family: 'Heebo', sans-serif; font-size: 13px; font-weight: 500;
+  cursor: pointer; box-shadow: 0 4px 20px rgba(201,169,110,.4);
+  transition: .2s; display: flex; align-items: center; gap: 8px;
 }
-.hero-img {
-  position: absolute;
-  inset: 0;
-  /* ↓↓↓ החליפי את הכתובת הזו בלינק של התמונה שלך ↓↓↓ */
-  background-image: url('HERO_IMAGE_URL');
-  /* ↑↑↑ לדוגמה: url('https://imgur.com/abc123.jpg') ↑↑↑ */
-  background-size: cover;
-  background-position: center;
+.edit-toggle:hover { background: var(--gold-dark); transform: translateY(-2px); }
+
+/* EDIT PANEL */
+.edit-panel {
+  display: none;
+  position: fixed; top: 0; right: 0; width: 380px; height: 100vh;
+  background: #fff; border-left: 1px solid var(--border);
+  box-shadow: -8px 0 40px rgba(0,0,0,.12);
+  z-index: 9998; overflow-y: auto; direction: rtl;
 }
+.edit-panel.open { display: block; }
+.ep-header {
+  background: var(--dark); padding: 20px 24px;
+  display: flex; align-items: center; justify-content: space-between;
+  position: sticky; top: 0;
+}
+.ep-title { font-family: 'Playfair Display', serif; color: #fff; font-size: 18px; }
+.ep-close { background: none; border: none; color: rgba(255,255,255,.6); font-size: 20px; cursor: pointer; }
+.ep-body { padding: 24px; }
+.ep-section { margin-bottom: 28px; border-bottom: 1px solid var(--border); padding-bottom: 24px; }
+.ep-section:last-child { border-bottom: none; }
+.ep-section-title {
+  font-size: 10px; letter-spacing: 2px; text-transform: uppercase;
+  color: var(--gold); font-weight: 600; margin-bottom: 16px;
+}
+.ep-field { margin-bottom: 14px; }
+.ep-label { font-size: 11px; color: #888; margin-bottom: 5px; display: block; }
+.ep-input {
+  width: 100%; border: 1px solid var(--border); border-radius: 6px;
+  padding: 9px 12px; font-family: 'Heebo', sans-serif; font-size: 13px;
+  color: var(--dark); outline: none; transition: .2s;
+}
+.ep-input:focus { border-color: var(--gold); }
+.ep-textarea {
+  width: 100%; border: 1px solid var(--border); border-radius: 6px;
+  padding: 9px 12px; font-family: 'Heebo', sans-serif; font-size: 13px;
+  color: var(--dark); outline: none; resize: vertical; min-height: 70px; transition: .2s;
+}
+.ep-textarea:focus { border-color: var(--gold); }
+.ep-apply {
+  width: 100%; background: var(--gold); color: #fff; border: none;
+  padding: 12px; border-radius: 6px; font-family: 'Heebo', sans-serif;
+  font-size: 14px; font-weight: 600; cursor: pointer; margin-top: 8px; transition: .2s;
+}
+.ep-apply:hover { background: var(--gold-dark); }
+.ep-hint { font-size: 11px; color: #aaa; margin-top: 5px; line-height: 1.5; }
+.ep-save-bar {
+  display: none; position: fixed; bottom: 0; right: 0; width: 380px;
+  background: var(--dark); padding: 16px 24px;
+  border-top: 1px solid #333; z-index: 9999;
+}
+.ep-save-bar.open { display: block; }
+.ep-save-note { color: rgba(255,255,255,.6); font-size: 12px; margin-bottom: 10px; line-height: 1.5; }
+.ep-export {
+  width: 100%; background: var(--gold); color: #fff; border: none;
+  padding: 11px; font-family: 'Heebo', sans-serif; font-size: 13px;
+  font-weight: 600; cursor: pointer; border-radius: 4px;
+}
+
+/* HERO */
+.hero { position: relative; height: 520px; display: flex; align-items: center; overflow: hidden; }
+.hero-img { position: absolute; inset: 0; background-size: cover; background-position: center; background-color: #2a1a0e; }
 .hero-overlay { position: absolute; inset: 0; background: linear-gradient(to left, rgba(10,6,2,0.85) 0%, rgba(10,6,2,0.5) 55%, rgba(10,6,2,0.1) 100%); }
 .hero-content { position: relative; z-index: 1; padding: 0 60px; max-width: 580px; direction: ltr; }
 .hero-tag { font-size: 11px; letter-spacing: 3px; color: var(--gold); text-transform: uppercase; margin-bottom: 18px; font-weight: 300; font-family: 'Heebo', sans-serif; }
@@ -57,7 +106,7 @@ body { font-family: 'Heebo', sans-serif; background: var(--cream); color: var(--
 .hero-cta:hover { background: var(--gold-dark); }
 .hero-sig { position: absolute; bottom: 26px; left: 60px; font-size: 11px; color: rgba(255,255,255,.4); letter-spacing: 1.5px; font-family: 'Heebo', sans-serif; }
 
-/* RECIPES GRID */
+/* SECTION */
 .section { padding: 52px 40px; }
 .section-header { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 36px; }
 .section-title { font-family: 'Playfair Display', serif; font-size: 28px; }
@@ -77,7 +126,7 @@ body { font-family: 'Heebo', sans-serif; background: var(--cream); color: var(--
 .card-stars { color: var(--gold); font-size: 12px; }
 .card-who { font-size: 11px; color: #aaa; }
 
-/* FEATURE SECTION */
+/* FEATURE */
 .feature { background: var(--dark); padding: 52px 40px; display: grid; grid-template-columns: 1fr 1fr; gap: 48px; align-items: center; }
 .feature-img { height: 300px; overflow: hidden; }
 .feature-img img { width: 100%; height: 100%; object-fit: cover; opacity: .85; }
@@ -109,8 +158,8 @@ body { font-family: 'Heebo', sans-serif; background: var(--cream); color: var(--
   .section { padding: 36px 20px; }
   .grid { grid-template-columns: 1fr; }
   .feature { grid-template-columns: 1fr; padding: 36px 20px; }
-  .love-strip { padding: 20px; text-align: center; }
-  .footer-bar { padding: 18px 20px; flex-direction: column; gap: 8px; }
+  .edit-panel { width: 100%; }
+  .ep-save-bar { width: 100%; }
 }
 </style>
 </head>
@@ -127,15 +176,15 @@ body { font-family: 'Heebo', sans-serif; background: var(--cream); color: var(--
 </nav>
 
 <div class="hero">
-  <div class="hero-img"></div>
+  <div class="hero-img" id="heroImg"></div>
   <div class="hero-overlay"></div>
   <div class="hero-content">
-    <div class="hero-tag">Our kitchen, our love</div>
-    <h1 class="hero-title">Cooking together<br>is <em>love</em> made<br>visible</h1>
-    <p class="hero-sub">A private collection of recipes we love, discovered and made together.</p>
-    <button class="hero-cta">לכל המתכונים שלנו</button>
+    <div class="hero-tag" id="heroTag">Our kitchen, our love</div>
+    <h1 class="hero-title" id="heroTitle">Cooking together<br>is <em>love</em> made<br>visible</h1>
+    <p class="hero-sub" id="heroSub">A private collection of recipes we love, discovered and made together.</p>
+    <button class="hero-cta" id="heroCta">לכל המתכונים שלנו</button>
   </div>
-  <div class="hero-sig">סיון ורוי — מבשלות באהבה ♥</div>
+  <div class="hero-sig" id="heroSig">סיון ורוי — מבשלות באהבה ♥</div>
 </div>
 
 <div class="section" style="background: var(--cream)">
@@ -146,44 +195,43 @@ body { font-family: 'Heebo', sans-serif; background: var(--cream); color: var(--
   <div class="grid">
     <div class="card">
       <div class="card-img">
-        <!-- החליפי את הלינק בתמונת מתכון אמיתית -->
-        <img src="https://images.unsplash.com/photo-1473093295043-cdd812d0e601?w=400&q=80" />
+        <img id="card1Img" src="https://images.unsplash.com/photo-1473093295043-cdd812d0e601?w=400&q=80" />
         <div class="card-accent"></div>
       </div>
       <div class="card-body">
-        <div class="card-cat">פסטה</div>
-        <div class="card-title">פסטה קרמית עם שום וגבינת פרמזן</div>
+        <div class="card-cat" id="card1Cat">פסטה</div>
+        <div class="card-title" id="card1Title">פסטה קרמית עם שום וגבינת פרמזן</div>
         <div class="card-meta">
           <div class="card-stars">★★★★☆</div>
-          <div class="card-who">סיון</div>
+          <div class="card-who" id="card1Who">סיון</div>
         </div>
       </div>
     </div>
     <div class="card">
       <div class="card-img">
-        <img src="https://images.unsplash.com/photo-1540189549336-e6e99c3679fe?w=400&q=80" />
+        <img id="card2Img" src="https://images.unsplash.com/photo-1540189549336-e6e99c3679fe?w=400&q=80" />
         <div class="card-accent"></div>
       </div>
       <div class="card-body">
-        <div class="card-cat">סלט</div>
-        <div class="card-title">קערת ים תיכון טרייה</div>
+        <div class="card-cat" id="card2Cat">סלט</div>
+        <div class="card-title" id="card2Title">קערת ים תיכון טרייה</div>
         <div class="card-meta">
           <div class="card-stars">★★★★★</div>
-          <div class="card-who">רוי</div>
+          <div class="card-who" id="card2Who">רוי</div>
         </div>
       </div>
     </div>
     <div class="card">
       <div class="card-img">
-        <img src="https://images.unsplash.com/photo-1565958011703-44f9829ba187?w=400&q=80" />
+        <img id="card3Img" src="https://images.unsplash.com/photo-1565958011703-44f9829ba187?w=400&q=80" />
         <div class="card-accent"></div>
       </div>
       <div class="card-body">
-        <div class="card-cat">קינוח</div>
-        <div class="card-title">עוגת שוקולד נזיל לשתיים</div>
+        <div class="card-cat" id="card3Cat">קינוח</div>
+        <div class="card-title" id="card3Title">עוגת שוקולד נזיל לשתיים</div>
         <div class="card-meta">
           <div class="card-stars">★★★★★</div>
-          <div class="card-who">ביחד ♥</div>
+          <div class="card-who" id="card3Who">ביחד ♥</div>
         </div>
       </div>
     </div>
@@ -192,22 +240,22 @@ body { font-family: 'Heebo', sans-serif; background: var(--cream); color: var(--
 
 <div class="feature">
   <div class="feature-content">
-    <div class="feature-tag">מתכון השבוע</div>
-    <h2 class="feature-title">מנה שגרמה לנו<br>להתאהב <em>מחדש</em></h2>
-    <p class="feature-text">כל מתכון כאן הוא זיכרון. ערב שישי, יום ראשון עצלן, רגע מיוחד שרצינו לשמור לנצח.</p>
+    <div class="feature-tag" id="featTag">מתכון השבוע</div>
+    <h2 class="feature-title" id="featTitle">מנה שגרמה לנו<br>להתאהב <em>מחדש</em></h2>
+    <p class="feature-text" id="featText">כל מתכון כאן הוא זיכרון. ערב שישי, יום ראשון עצלן, רגע מיוחד שרצינו לשמור לנצח.</p>
     <button class="feature-btn">לצפייה במתכון</button>
   </div>
   <div class="feature-img">
-    <img src="https://images.unsplash.com/photo-1414235077428-338989a2e8c0?w=600&q=80" />
+    <img id="featImg" src="https://images.unsplash.com/photo-1414235077428-338989a2e8c0?w=600&q=80" />
   </div>
 </div>
 
-<div class="love-strip">
-  <div class="love-strip-text">כי הדרך הכי טובה לאהוב מישהי</div>
+<div class="love-strip" id="loveStrip">
+  <div class="love-strip-text" id="love1">כי הדרך הכי טובה לאהוב מישהי</div>
   <div class="love-strip-dot"></div>
-  <div class="love-strip-text">היא לבשל בשבילה</div>
+  <div class="love-strip-text" id="love2">היא לבשל בשבילה</div>
   <div class="love-strip-dot"></div>
-  <div class="love-strip-text">ויחד — עוד יותר טוב</div>
+  <div class="love-strip-text" id="love3">ויחד — עוד יותר טוב</div>
 </div>
 
 <div class="footer-bar">
@@ -215,5 +263,218 @@ body { font-family: 'Heebo', sans-serif; background: var(--cream); color: var(--
   <div class="footer-heart">עשוי באהבה ♥</div>
 </div>
 
+<!-- כפתור עריכה -->
+<button class="edit-toggle" id="editToggle" onclick="toggleEdit()">✏️ מצב עריכה</button>
+
+<!-- פאנל עריכה -->
+<div class="edit-panel" id="editPanel">
+  <div class="ep-header">
+    <div class="ep-title">✏️ עריכת האתר</div>
+    <button class="ep-close" onclick="toggleEdit()">✕</button>
+  </div>
+  <div class="ep-body">
+
+    <!-- HERO -->
+    <div class="ep-section">
+      <div class="ep-section-title">🖼️ תמונת רקע ראשית</div>
+      <div class="ep-field">
+        <label class="ep-label">לינק לתמונה (URL)</label>
+        <input class="ep-input" id="in-heroImg" placeholder="https://..." />
+        <div class="ep-hint">העלי תמונה ל-imgur.com והדביקי את הלינק הישיר</div>
+      </div>
+      <div class="ep-field">
+        <label class="ep-label">תגית קטנה (טקסט עליון)</label>
+        <input class="ep-input" id="in-heroTag" value="Our kitchen, our love" />
+      </div>
+      <div class="ep-field">
+        <label class="ep-label">כתובית תחתונה</label>
+        <input class="ep-input" id="in-heroSig" value="סיון ורוי — מבשלות באהבה ♥" />
+      </div>
+      <div class="ep-field">
+        <label class="ep-label">תיאור קצר</label>
+        <textarea class="ep-textarea" id="in-heroSub">A private collection of recipes we love, discovered and made together.</textarea>
+      </div>
+      <button class="ep-apply" onclick="applyHero()">✓ עדכני hero</button>
+    </div>
+
+    <!-- CARD 1 -->
+    <div class="ep-section">
+      <div class="ep-section-title">🍽️ כרטיס מתכון 1</div>
+      <div class="ep-field">
+        <label class="ep-label">לינק תמונה</label>
+        <input class="ep-input" id="in-card1Img" placeholder="https://..." />
+      </div>
+      <div class="ep-field">
+        <label class="ep-label">קטגוריה</label>
+        <input class="ep-input" id="in-card1Cat" value="פסטה" />
+      </div>
+      <div class="ep-field">
+        <label class="ep-label">שם המתכון</label>
+        <input class="ep-input" id="in-card1Title" value="פסטה קרמית עם שום וגבינת פרמזן" />
+      </div>
+      <div class="ep-field">
+        <label class="ep-label">מי הוסיפה</label>
+        <input class="ep-input" id="in-card1Who" value="סיון" />
+      </div>
+      <button class="ep-apply" onclick="applyCard(1)">✓ עדכני כרטיס 1</button>
+    </div>
+
+    <!-- CARD 2 -->
+    <div class="ep-section">
+      <div class="ep-section-title">🍽️ כרטיס מתכון 2</div>
+      <div class="ep-field">
+        <label class="ep-label">לינק תמונה</label>
+        <input class="ep-input" id="in-card2Img" placeholder="https://..." />
+      </div>
+      <div class="ep-field">
+        <label class="ep-label">קטגוריה</label>
+        <input class="ep-input" id="in-card2Cat" value="סלט" />
+      </div>
+      <div class="ep-field">
+        <label class="ep-label">שם המתכון</label>
+        <input class="ep-input" id="in-card2Title" value="קערת ים תיכון טרייה" />
+      </div>
+      <div class="ep-field">
+        <label class="ep-label">מי הוסיפה</label>
+        <input class="ep-input" id="in-card2Who" value="רוי" />
+      </div>
+      <button class="ep-apply" onclick="applyCard(2)">✓ עדכני כרטיס 2</button>
+    </div>
+
+    <!-- CARD 3 -->
+    <div class="ep-section">
+      <div class="ep-section-title">🍽️ כרטיס מתכון 3</div>
+      <div class="ep-field">
+        <label class="ep-label">לינק תמונה</label>
+        <input class="ep-input" id="in-card3Img" placeholder="https://..." />
+      </div>
+      <div class="ep-field">
+        <label class="ep-label">קטגוריה</label>
+        <input class="ep-input" id="in-card3Cat" value="קינוח" />
+      </div>
+      <div class="ep-field">
+        <label class="ep-label">שם המתכון</label>
+        <input class="ep-input" id="in-card3Title" value="עוגת שוקולד נזיל לשתיים" />
+      </div>
+      <div class="ep-field">
+        <label class="ep-label">מי הוסיפה</label>
+        <input class="ep-input" id="in-card3Who" value="ביחד ♥" />
+      </div>
+      <button class="ep-apply" onclick="applyCard(3)">✓ עדכני כרטיס 3</button>
+    </div>
+
+    <!-- FEATURE -->
+    <div class="ep-section">
+      <div class="ep-section-title">⭐ מתכון השבוע</div>
+      <div class="ep-field">
+        <label class="ep-label">לינק תמונה</label>
+        <input class="ep-input" id="in-featImg" placeholder="https://..." />
+      </div>
+      <div class="ep-field">
+        <label class="ep-label">תגית</label>
+        <input class="ep-input" id="in-featTag" value="מתכון השבוע" />
+      </div>
+      <div class="ep-field">
+        <label class="ep-label">כותרת</label>
+        <input class="ep-input" id="in-featTitle" value="מנה שגרמה לנו להתאהב מחדש" />
+      </div>
+      <div class="ep-field">
+        <label class="ep-label">תיאור</label>
+        <textarea class="ep-textarea" id="in-featText">כל מתכון כאן הוא זיכרון. ערב שישי, יום ראשון עצלן, רגע מיוחד שרצינו לשמור לנצח.</textarea>
+      </div>
+      <button class="ep-apply" onclick="applyFeature()">✓ עדכני מתכון השבוע</button>
+    </div>
+
+    <!-- LOVE STRIP -->
+    <div class="ep-section">
+      <div class="ep-section-title">💛 רצועת האהבה</div>
+      <div class="ep-field">
+        <label class="ep-label">משפט 1</label>
+        <input class="ep-input" id="in-love1" value="כי הדרך הכי טובה לאהוב מישהי" />
+      </div>
+      <div class="ep-field">
+        <label class="ep-label">משפט 2</label>
+        <input class="ep-input" id="in-love2" value="היא לבשל בשבילה" />
+      </div>
+      <div class="ep-field">
+        <label class="ep-label">משפט 3</label>
+        <input class="ep-input" id="in-love3" value="ויחד — עוד יותר טוב" />
+      </div>
+      <button class="ep-apply" onclick="applyLove()">✓ עדכני רצועה</button>
+    </div>
+
+  </div>
+</div>
+
+<!-- סרגל שמירה -->
+<div class="ep-save-bar" id="epSaveBar">
+  <div class="ep-save-note">השינויים נראים בדף אבל לא נשמרו עדיין.<br>לחצי להוריד את הקובץ המעודכן ← גררי ל-GitHub.</div>
+  <button class="ep-export" onclick="exportHTML()">💾 הורידי קובץ מעודכן</button>
+</div>
+
+<script>
+let editMode = false;
+let hasChanges = false;
+
+function toggleEdit() {
+  editMode = !editMode;
+  document.getElementById('editPanel').classList.toggle('open', editMode);
+  document.getElementById('epSaveBar').classList.toggle('open', editMode && hasChanges);
+  document.getElementById('editToggle').textContent = editMode ? '✕ סגרי עריכה' : '✏️ מצב עריכה';
+}
+
+function markChanged() {
+  hasChanges = true;
+  if (editMode) document.getElementById('epSaveBar').classList.add('open');
+}
+
+function applyHero() {
+  const img = document.getElementById('in-heroImg').value.trim();
+  if (img) document.getElementById('heroImg').style.backgroundImage = `url('${img}')`;
+  document.getElementById('heroTag').textContent = document.getElementById('in-heroTag').value;
+  document.getElementById('heroSig').textContent = document.getElementById('in-heroSig').value;
+  document.getElementById('heroSub').textContent = document.getElementById('in-heroSub').value;
+  markChanged();
+  alert('✅ Hero עודכן!');
+}
+
+function applyCard(n) {
+  const img = document.getElementById(`in-card${n}Img`).value.trim();
+  if (img) document.getElementById(`card${n}Img`).src = img;
+  document.getElementById(`card${n}Cat`).textContent = document.getElementById(`in-card${n}Cat`).value;
+  document.getElementById(`card${n}Title`).textContent = document.getElementById(`in-card${n}Title`).value;
+  document.getElementById(`card${n}Who`).textContent = document.getElementById(`in-card${n}Who`).value;
+  markChanged();
+  alert(`✅ כרטיס ${n} עודכן!`);
+}
+
+function applyFeature() {
+  const img = document.getElementById('in-featImg').value.trim();
+  if (img) document.getElementById('featImg').src = img;
+  document.getElementById('featTag').textContent = document.getElementById('in-featTag').value;
+  document.getElementById('featTitle').innerHTML = document.getElementById('in-featTitle').value.replace('מחדש', '<em>מחדש</em>');
+  document.getElementById('featText').textContent = document.getElementById('in-featText').value;
+  markChanged();
+  alert('✅ מתכון השבוע עודכן!');
+}
+
+function applyLove() {
+  document.getElementById('love1').textContent = document.getElementById('in-love1').value;
+  document.getElementById('love2').textContent = document.getElementById('in-love2').value;
+  document.getElementById('love3').textContent = document.getElementById('in-love3').value;
+  markChanged();
+  alert('✅ רצועת האהבה עודכנה!');
+}
+
+function exportHTML() {
+  const html = document.documentElement.outerHTML;
+  const blob = new Blob([html], {type: 'text/html'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'index.html';
+  a.click();
+  URL.revokeObjectURL(a.href);
+}
+</script>
 </body>
 </html>
