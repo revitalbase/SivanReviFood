@@ -93,6 +93,9 @@ body { font-family: 'Heebo', sans-serif; background: var(--cream); color: var(--
   font-weight: 600; cursor: pointer; border-radius: 4px;
 }
 
+/* VIDEO / GIF support */
+.hero-video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0; }
+.card-video { width: 100%; height: 100%; object-fit: cover; display: block; }
 /* HERO */
 .hero { position: relative; height: 520px; display: flex; align-items: center; overflow: hidden; }
 .hero-img { position: absolute; inset: 0; background-size: cover; background-position: center; background-color: #2a1a0e; }
@@ -176,7 +179,11 @@ body { font-family: 'Heebo', sans-serif; background: var(--cream); color: var(--
 </nav>
 
 <div class="hero">
-  <div class="hero-img" id="heroImg"></div>
+  <div class="hero-img" id="heroImg">
+  <video class="hero-video" autoplay loop muted playsinline>
+    <source src="https://res.cloudinary.com/dt3n4di9i/video/upload/WhatsApp_Video_2026-03-31_at_14.39.48_idhtqz.mp4" type="video/mp4">
+  </video>
+</div>
   <div class="hero-overlay"></div>
   <div class="hero-content">
     <div class="hero-tag" id="heroTag">Our kitchen, our love</div>
@@ -278,9 +285,20 @@ body { font-family: 'Heebo', sans-serif; background: var(--cream); color: var(--
     <div class="ep-section">
       <div class="ep-section-title">🖼️ תמונת רקע ראשית</div>
       <div class="ep-field">
-        <label class="ep-label">לינק לתמונה (URL)</label>
+        <label class="ep-label">סוג מדיה</label>
+        <select class="ep-input" id="in-heroType">
+          <option value="image">תמונה / GIF</option>
+          <option value="video">וידאו (mp4)</option>
+        </select>
+      </div>
+      <div class="ep-field">
+        <label class="ep-label">העלאה מקומית (תמונה / GIF / וידאו)</label>
+        <input type="file" id="in-heroFile" accept="image/*,video/mp4,video/webm" style="width:100%;font-size:13px;padding:6px 0" />
+        <div class="ep-hint">או הדביקי לינק URL למטה</div>
+      </div>
+      <div class="ep-field">
+        <label class="ep-label">לינק URL (חלופה לקובץ)</label>
         <input class="ep-input" id="in-heroImg" placeholder="https://..." />
-        <div class="ep-hint">העלי תמונה ל-imgur.com והדביקי את הלינק הישיר</div>
       </div>
       <div class="ep-field">
         <label class="ep-label">תגית קטנה (טקסט עליון)</label>
@@ -301,7 +319,9 @@ body { font-family: 'Heebo', sans-serif; background: var(--cream); color: var(--
     <div class="ep-section">
       <div class="ep-section-title">🍽️ כרטיס מתכון 1</div>
       <div class="ep-field">
-        <label class="ep-label">לינק תמונה</label>
+        <label class="ep-label">העלאה מקומית (תמונה / GIF / וידאו)</label>
+        <input type="file" id="in-card1File" accept="image/*,video/mp4,video/webm" style="width:100%;font-size:13px;padding:6px 0" />
+        <div class="ep-hint" style="margin-bottom:6px">או לינק URL:</div>
         <input class="ep-input" id="in-card1Img" placeholder="https://..." />
       </div>
       <div class="ep-field">
@@ -323,7 +343,9 @@ body { font-family: 'Heebo', sans-serif; background: var(--cream); color: var(--
     <div class="ep-section">
       <div class="ep-section-title">🍽️ כרטיס מתכון 2</div>
       <div class="ep-field">
-        <label class="ep-label">לינק תמונה</label>
+        <label class="ep-label">העלאה מקומית (תמונה / GIF / וידאו)</label>
+        <input type="file" id="in-card2File" accept="image/*,video/mp4,video/webm" style="width:100%;font-size:13px;padding:6px 0" />
+        <div class="ep-hint" style="margin-bottom:6px">או לינק URL:</div>
         <input class="ep-input" id="in-card2Img" placeholder="https://..." />
       </div>
       <div class="ep-field">
@@ -345,7 +367,9 @@ body { font-family: 'Heebo', sans-serif; background: var(--cream); color: var(--
     <div class="ep-section">
       <div class="ep-section-title">🍽️ כרטיס מתכון 3</div>
       <div class="ep-field">
-        <label class="ep-label">לינק תמונה</label>
+        <label class="ep-label">העלאה מקומית (תמונה / GIF / וידאו)</label>
+        <input type="file" id="in-card3File" accept="image/*,video/mp4,video/webm" style="width:100%;font-size:13px;padding:6px 0" />
+        <div class="ep-hint" style="margin-bottom:6px">או לינק URL:</div>
         <input class="ep-input" id="in-card3Img" placeholder="https://..." />
       </div>
       <div class="ep-field">
@@ -367,7 +391,9 @@ body { font-family: 'Heebo', sans-serif; background: var(--cream); color: var(--
     <div class="ep-section">
       <div class="ep-section-title">⭐ מתכון השבוע</div>
       <div class="ep-field">
-        <label class="ep-label">לינק תמונה</label>
+        <label class="ep-label">העלאה מקומית (תמונה / GIF / וידאו)</label>
+        <input type="file" id="in-featFile" accept="image/*,video/mp4,video/webm" style="width:100%;font-size:13px;padding:6px 0" />
+        <div class="ep-hint" style="margin-bottom:6px">או לינק URL:</div>
         <input class="ep-input" id="in-featImg" placeholder="https://..." />
       </div>
       <div class="ep-field">
@@ -428,9 +454,34 @@ function markChanged() {
   if (editMode) document.getElementById('epSaveBar').classList.add('open');
 }
 
+function setHeroMedia(src, type) {
+  const heroEl = document.getElementById('heroImg');
+  const existing = document.getElementById('heroVideoEl');
+  if (existing) existing.remove();
+  if (type === 'video') {
+    heroEl.style.backgroundImage = 'none';
+    const vid = document.createElement('video');
+    vid.id = 'heroVideoEl';
+    vid.className = 'hero-video';
+    vid.src = src; vid.autoplay = true; vid.loop = true;
+    vid.muted = true; vid.playsInline = true;
+    heroEl.appendChild(vid);
+  } else {
+    heroEl.style.backgroundImage = `url('${src}')`;
+  }
+}
+
 function applyHero() {
-  const img = document.getElementById('in-heroImg').value.trim();
-  if (img) document.getElementById('heroImg').style.backgroundImage = `url('${img}')`;
+  const type = document.getElementById('in-heroType').value;
+  const file = document.getElementById('in-heroFile').files[0];
+  const url = document.getElementById('in-heroImg').value.trim();
+  if (file) {
+    const reader = new FileReader();
+    reader.onload = e => { setHeroMedia(e.target.result, file.type.startsWith('video') ? 'video' : 'image'); };
+    reader.readAsDataURL(file);
+  } else if (url) {
+    setHeroMedia(url, type);
+  }
   document.getElementById('heroTag').textContent = document.getElementById('in-heroTag').value;
   document.getElementById('heroSig').textContent = document.getElementById('in-heroSig').value;
   document.getElementById('heroSub').textContent = document.getElementById('in-heroSub').value;
@@ -438,9 +489,33 @@ function applyHero() {
   alert('✅ Hero עודכן!');
 }
 
+function setCardMedia(n, src, isVideo) {
+  const container = document.getElementById(`card${n}Img`).parentElement;
+  const existing = container.querySelector('video');
+  if (existing) existing.remove();
+  if (isVideo) {
+    document.getElementById(`card${n}Img`).style.display = 'none';
+    const vid = document.createElement('video');
+    vid.className = 'card-video'; vid.src = src;
+    vid.autoplay = true; vid.loop = true; vid.muted = true; vid.playsInline = true;
+    container.insertBefore(vid, container.firstChild);
+  } else {
+    document.getElementById(`card${n}Img`).style.display = 'block';
+    document.getElementById(`card${n}Img`).src = src;
+  }
+}
+
 function applyCard(n) {
-  const img = document.getElementById(`in-card${n}Img`).value.trim();
-  if (img) document.getElementById(`card${n}Img`).src = img;
+  const file = document.getElementById(`in-card${n}File`).files[0];
+  const url = document.getElementById(`in-card${n}Img`).value.trim();
+  if (file) {
+    const reader = new FileReader();
+    reader.onload = e => setCardMedia(n, e.target.result, file.type.startsWith('video'));
+    reader.readAsDataURL(file);
+  } else if (url) {
+    const isVideo = url.match(/\.mp4|webm/i);
+    setCardMedia(n, url, isVideo);
+  }
   document.getElementById(`card${n}Cat`).textContent = document.getElementById(`in-card${n}Cat`).value;
   document.getElementById(`card${n}Title`).textContent = document.getElementById(`in-card${n}Title`).value;
   document.getElementById(`card${n}Who`).textContent = document.getElementById(`in-card${n}Who`).value;
@@ -449,8 +524,26 @@ function applyCard(n) {
 }
 
 function applyFeature() {
-  const img = document.getElementById('in-featImg').value.trim();
-  if (img) document.getElementById('featImg').src = img;
+  const file = document.getElementById('in-featFile').files[0];
+  const url = document.getElementById('in-featImg').value.trim();
+  const container = document.getElementById('featImg').parentElement;
+  if (file) {
+    const reader = new FileReader();
+    reader.onload = e => {
+      if (file.type.startsWith('video')) {
+        document.getElementById('featImg').style.display = 'none';
+        let vid = container.querySelector('video');
+        if (!vid) { vid = document.createElement('video'); vid.style.cssText='width:100%;height:100%;object-fit:cover'; vid.autoplay=true; vid.loop=true; vid.muted=true; vid.playsInline=true; container.appendChild(vid); }
+        vid.src = e.target.result;
+      } else {
+        document.getElementById('featImg').style.display = 'block';
+        document.getElementById('featImg').src = e.target.result;
+      }
+    };
+    reader.readAsDataURL(file);
+  } else if (url) {
+    document.getElementById('featImg').src = url;
+  }
   document.getElementById('featTag').textContent = document.getElementById('in-featTag').value;
   document.getElementById('featTitle').innerHTML = document.getElementById('in-featTitle').value.replace('מחדש', '<em>מחדש</em>');
   document.getElementById('featText').textContent = document.getElementById('in-featText').value;
