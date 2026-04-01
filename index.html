@@ -24,6 +24,9 @@ body { font-family: 'Heebo', sans-serif; background: var(--cream); color: var(--
 .nav-links a { text-decoration: none; color: #666; transition: .2s; }
 .nav-links a:hover { color: var(--gold); }
 .nav-btn { background: var(--dark); color: #fff; border: none; padding: 9px 20px; font-family: 'Heebo', sans-serif; font-size: 12px; cursor: pointer; }
+.nav-backup { background: none; border: 1px solid var(--border); color: #666; padding: 7px 14px; font-family: 'Heebo', sans-serif; font-size: 12px; cursor: pointer; border-radius: 4px; transition:.2s; display:flex; align-items:center; gap:5px; }
+.nav-backup:hover { border-color: var(--gold); color: var(--gold); }
+.nav-actions { display: flex; gap: 8px; align-items: center; }
 
 /* EDIT MODE BUTTON */
 .edit-toggle {
@@ -215,7 +218,14 @@ body { font-family: 'Heebo', sans-serif; background: var(--cream); color: var(--
     <a href="#">קטגוריות</a>
     <a href="#">מועדפים</a>
   </div>
-  <button class="nav-btn" onclick="openQuickAdd()">+ הוסיפי מתכון</button>
+  <div class="nav-actions">
+    <button class="nav-backup" onclick="manualBackup()" title="גיבוי">💾 גיבוי</button>
+    <label class="nav-backup" title="שחזור" style="cursor:pointer">
+      📂 שחזור
+      <input type="file" accept=".json" id="restoreFile" onchange="restoreBackup(event)" style="display:none"/>
+    </label>
+    <button class="nav-btn" onclick="openQuickAdd()">+ הוסיפי מתכון</button>
+  </div>
 </nav>
 
 <div class="hero">
@@ -713,6 +723,7 @@ window.addEventListener('DOMContentLoaded', () => {
   checkEditAccess();
   setTimeout(loadPageData, 500);
   setTimeout(()=>{ initStarRatings(); loadRatings(); }, 600);
+  setTimeout(autoBackup, 8000);
 });
 
 let editMode = false;
@@ -1010,7 +1021,18 @@ async function quickSave(){
   btn.disabled=true; ov.classList.add('show');
   document.getElementById('procMsg').textContent='מחלצת ומתרגמת מתכון... ✨';
   const cats='אסיאתי/ראשונות/עיקריות/קינוחים/מרקים/סלטים/דג/בשר/ירקות/לחמים/שתייה/נשנושים';
-  const rules=`תרגם לעברית. החזר JSON בלבד: {"name":"שם","category":"מתוך: ${cats}","prepTime":"X דקות","servings":"X מנות","ingredients":["מצרך","..."],"steps":["שלב","..."]}`;
+  const rules=`תרגם לעברית ישראלית. המר את כל המידות לשיטה המטרית והמקובל בישראל:
+- כוס (cup) = 240 מ"ל
+- כף (tablespoon/tbsp) = 15 מ"ל
+- כפית (teaspoon/tsp) = 5 מ"ל
+- אונקיה (oz) = 30 מ"ל (נוזל) / 28 גרם (משקל)
+- פאונד (lb) = 450 גרם
+- °F → °C: (F-32) ÷ 1.8 (עגל למספר שלם)
+- אינץ' = 2.5 ס"מ
+- רבע כוס = 60 מ"ל, חצי כוס = 120 מ"ל, שלושת רבעי כוס = 180 מ"ל
+- stick of butter = 110 גרם חמאה
+- השתמש רק ביחידות ישראליות: גרם, ק"ג, מ"ל, ל', ס"מ, כף, כפית — לא cups/oz/lbs/°F
+החזר JSON בלבד: {"name":"שם","category":"מתוך: ${cats}","prepTime":"X דקות","servings":"X מנות","ingredients":["כמות מצרך","..."],"steps":["שלב","..."]}`;
   const msgContent=text?`חלץ מתכון מהטקסט:
 
 ${text.substring(0,5000)}
@@ -1129,6 +1151,82 @@ function initStarRatings(){
       });
     });
   });
+}
+
+// ── גיבוי ושחזור ──
+async function manualBackup(){
+  const data = {
+    pageContent: collectPageData(),
+    recipes: srRecipes,
+    ratings: srRatings,
+    timestamp: new Date().toISOString()
+  };
+  const json = JSON.stringify(data, null, 2);
+  const blob = new Blob([json], {type:'application/json'});
+  const a = document.createElement('a');
+  const date = new Date().toLocaleDateString('he-IL').replace(/\./g,'-');
+  a.href = URL.createObjectURL(blob);
+  a.download = `sivanrevi-backup-${date}.json`;
+  a.click();
+  URL.revokeObjectURL(a.href);
+
+  // גם שמור ל-Supabase כגיבוי
+  const sb = await initSupabase();
+  if(sb){
+    const dateStr = new Date().toISOString().slice(0,10);
+    sb.from('recipes').upsert({id:`backup_${dateStr}`, data:json, updated_at:new Date().toISOString()},{onConflict:'id'})
+      .then(()=> toast(`💾 גיבוי נשמר!`));
+  } else {
+    toast(`💾 גיבוי הורד!`);
+  }
+}
+
+async function restoreBackup(e){
+  const file = e.target.files[0];
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = async ev => {
+    try{
+      const data = JSON.parse(ev.target.result);
+      if(data.pageContent){
+        // שחזר תוכן דף
+        localStorage.setItem('sr_page_data', JSON.stringify(data.pageContent));
+        const sb = await initSupabase();
+        if(sb) await sb.from('recipes').upsert({id:'page_content',data:JSON.stringify(data.pageContent),updated_at:new Date().toISOString()},{onConflict:'id'});
+        loadPageData();
+      }
+      if(data.recipes){
+        srRecipes = data.recipes;
+        await saveSRRecipes();
+      }
+      if(data.ratings){
+        srRatings = data.ratings;
+        await saveRatings();
+        renderRatings();
+      }
+      toast(`✅ שוחזר בהצלחה!`);
+    }catch(err){
+      toast('❌ שגיאה בשחזור — ודאי שזה קובץ גיבוי תקין');
+    }
+    e.target.value = '';
+  };
+  reader.readAsText(file);
+}
+
+// גיבוי אוטומטי כל 24 שעות
+async function autoBackup(){
+  if(!srRecipes || !srRecipes.length) return;
+  const lastKey = 'sr_last_backup';
+  const now = Date.now();
+  const last = parseInt(localStorage.getItem(lastKey)||'0');
+  if(now - last < 24*60*60*1000) return;
+  const sb = await initSupabase();
+  if(!sb) return;
+  const dateStr = new Date().toISOString().slice(0,10);
+  const data = { pageContent: collectPageData(), recipes: srRecipes, ratings: srRatings };
+  await sb.from('recipes').upsert({id:`backup_${dateStr}`, data:JSON.stringify(data), updated_at:new Date().toISOString()},{onConflict:'id'});
+  localStorage.setItem(lastKey, String(now));
+  console.log('✅ גיבוי אוטומטי הושלם');
 }
 
 // ── שמירת תוכן הדף ל-Supabase + localStorage ──
