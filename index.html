@@ -581,8 +581,53 @@ body { font-family: 'Heebo', sans-serif; background: var(--cream); color: var(--
 let editMode = false;
 let hasChanges = false;
 
+function syncEditPanel() {
+  // סנכרן שדות עריכה עם הערכים הנוכחיים מהמסך
+  const g = (id) => { const el = document.getElementById(id); return el ? el.textContent.trim() : ''; };
+  const gi = (id) => { const el = document.getElementById(id); return el ? (el.src || el.getAttribute('src') || '') : ''; };
+
+  // Hero
+  const heroTag = document.getElementById('in-heroTag');
+  if(heroTag) heroTag.value = g('heroTag');
+  const heroSig = document.getElementById('in-heroSig');
+  if(heroSig) heroSig.value = g('heroSig');
+  const heroSub = document.getElementById('in-heroSub');
+  if(heroSub) heroSub.value = g('heroSub');
+
+  // Cards
+  [1,2,3,4,5,6].forEach(n => {
+    const cat = document.getElementById(`in-card${n}Cat`);
+    const title = document.getElementById(`in-card${n}Title`);
+    const who = document.getElementById(`in-card${n}Who`);
+    const img = document.getElementById(`in-card${n}Img`);
+    if(cat) cat.value = g(`card${n}Cat`);
+    if(title) title.value = g(`card${n}Title`);
+    if(who) who.value = g(`card${n}Who`);
+    if(img) img.value = gi(`card${n}Img`);
+  });
+
+  // Feature
+  const featTag = document.getElementById('in-featTag');
+  const featTitle = document.getElementById('in-featTitle');
+  const featText = document.getElementById('in-featText');
+  const featImg = document.getElementById('in-featImg');
+  if(featTag) featTag.value = g('featTag');
+  if(featTitle) featTitle.value = document.getElementById('featTitle') ? document.getElementById('featTitle').textContent.trim() : '';
+  if(featText) featText.value = g('featText');
+  if(featImg) featImg.value = gi('featImg');
+
+  // Love strip
+  const l1 = document.getElementById('in-love1');
+  const l2 = document.getElementById('in-love2');
+  const l3 = document.getElementById('in-love3');
+  if(l1) l1.value = g('love1');
+  if(l2) l2.value = g('love2');
+  if(l3) l3.value = g('love3');
+}
+
 function toggleEdit() {
   editMode = !editMode;
+  if(editMode) syncEditPanel();
   document.getElementById('editPanel').classList.toggle('open', editMode);
   document.getElementById('epSaveBar').classList.toggle('open', editMode && hasChanges);
   document.getElementById('editToggle').textContent = editMode ? '✕ סגרי עריכה' : '✏️ מצב עריכה';
