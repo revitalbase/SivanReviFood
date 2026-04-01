@@ -528,6 +528,48 @@ body { font-family: 'Heebo', sans-serif; background: var(--cream); color: var(--
 
     <!-- FEATURE -->
     <div class="ep-section">
+      <div class="ep-section-title">🍽️ כרטיס מתכון 4</div>
+      <div class="ep-field">
+        <label class="ep-label">העלאה מקומית (תמונה / GIF / וידאו)</label>
+        <input type="file" id="in-card4File" accept="image/*,video/mp4,video/webm" style="width:100%;font-size:13px;padding:6px 0" />
+        <div class="ep-hint" style="margin-bottom:6px">או לינק URL:</div>
+        <input class="ep-input" id="in-card4Img" placeholder="https://..." />
+      </div>
+      <div class="ep-field"><label class="ep-label">קטגוריה</label><input class="ep-input" id="in-card4Cat" /></div>
+      <div class="ep-field"><label class="ep-label">שם המתכון</label><input class="ep-input" id="in-card4Title" /></div>
+      <div class="ep-field"><label class="ep-label">מי הוסיפה</label><input class="ep-input" id="in-card4Who" /></div>
+      <button class="ep-apply" onclick="applyCard(4)">✓ עדכני כרטיס 4</button>
+    </div>
+
+    <div class="ep-section">
+      <div class="ep-section-title">🍽️ כרטיס מתכון 5</div>
+      <div class="ep-field">
+        <label class="ep-label">העלאה מקומית (תמונה / GIF / וידאו)</label>
+        <input type="file" id="in-card5File" accept="image/*,video/mp4,video/webm" style="width:100%;font-size:13px;padding:6px 0" />
+        <div class="ep-hint" style="margin-bottom:6px">או לינק URL:</div>
+        <input class="ep-input" id="in-card5Img" placeholder="https://..." />
+      </div>
+      <div class="ep-field"><label class="ep-label">קטגוריה</label><input class="ep-input" id="in-card5Cat" /></div>
+      <div class="ep-field"><label class="ep-label">שם המתכון</label><input class="ep-input" id="in-card5Title" /></div>
+      <div class="ep-field"><label class="ep-label">מי הוסיפה</label><input class="ep-input" id="in-card5Who" /></div>
+      <button class="ep-apply" onclick="applyCard(5)">✓ עדכני כרטיס 5</button>
+    </div>
+
+    <div class="ep-section">
+      <div class="ep-section-title">🍽️ כרטיס מתכון 6</div>
+      <div class="ep-field">
+        <label class="ep-label">העלאה מקומית (תמונה / GIF / וידאו)</label>
+        <input type="file" id="in-card6File" accept="image/*,video/mp4,video/webm" style="width:100%;font-size:13px;padding:6px 0" />
+        <div class="ep-hint" style="margin-bottom:6px">או לינק URL:</div>
+        <input class="ep-input" id="in-card6Img" placeholder="https://..." />
+      </div>
+      <div class="ep-field"><label class="ep-label">קטגוריה</label><input class="ep-input" id="in-card6Cat" /></div>
+      <div class="ep-field"><label class="ep-label">שם המתכון</label><input class="ep-input" id="in-card6Title" /></div>
+      <div class="ep-field"><label class="ep-label">מי הוסיפה</label><input class="ep-input" id="in-card6Who" /></div>
+      <button class="ep-apply" onclick="applyCard(6)">✓ עדכני כרטיס 6</button>
+    </div>
+
+    <div class="ep-section">
       <div class="ep-section-title">⭐ מתכון השבוע</div>
       <div class="ep-field">
         <label class="ep-label">העלאה מקומית (תמונה / GIF / וידאו)</label>
@@ -670,7 +712,8 @@ function applyHero() {
   document.getElementById('heroSig').textContent = document.getElementById('in-heroSig').value;
   document.getElementById('heroSub').textContent = document.getElementById('in-heroSub').value;
   markChanged();
-  alert('✅ Hero עודכן!');
+  savePageData();
+  toast('✅ Hero עודכן ונשמר!');
 }
 
 function setCardMedia(n, src, isVideo) {
@@ -704,7 +747,8 @@ function applyCard(n) {
   document.getElementById(`card${n}Title`).textContent = document.getElementById(`in-card${n}Title`).value;
   document.getElementById(`card${n}Who`).textContent = document.getElementById(`in-card${n}Who`).value;
   markChanged();
-  alert(`✅ כרטיס ${n} עודכן!`);
+  savePageData();
+  toast(`✅ כרטיס ${n} עודכן ונשמר!`);
 }
 
 function applyFeature() {
@@ -732,7 +776,8 @@ function applyFeature() {
   document.getElementById('featTitle').innerHTML = document.getElementById('in-featTitle').value.replace('מחדש', '<em>מחדש</em>');
   document.getElementById('featText').textContent = document.getElementById('in-featText').value;
   markChanged();
-  alert('✅ מתכון השבוע עודכן!');
+  savePageData();
+  toast('✅ מתכון השבוע עודכן ונשמר!');
 }
 
 function applyLove() {
@@ -740,7 +785,8 @@ function applyLove() {
   document.getElementById('love2').textContent = document.getElementById('in-love2').value;
   document.getElementById('love3').textContent = document.getElementById('in-love3').value;
   markChanged();
-  alert('✅ רצועת האהבה עודכנה!');
+  savePageData();
+  toast('✅ רצועת האהבה עודכנה ונשמרה!');
 }
 
 // ── SUPABASE + RECIPES ──
@@ -921,6 +967,118 @@ function renderNewCard(r){
 }
 
 // ── exportHTML ──
+// ── שמירת תוכן הדף ל-Supabase + localStorage ──
+function collectPageData() {
+  const g = (id) => { const el = document.getElementById(id); return el ? el.textContent.trim() : ''; };
+  const gi = (id) => { const el = document.getElementById(id); return el ? (el.src||'') : ''; };
+
+  const cards = [];
+  [1,2,3,4,5,6].forEach(n => {
+    const el = document.getElementById(`card${n}Img`);
+    cards.push({
+      img:   el ? (el.src||'') : '',
+      cat:   g(`card${n}Cat`),
+      title: g(`card${n}Title`),
+      who:   g(`card${n}Who`),
+    });
+  });
+
+  return {
+    hero: {
+      tag:    g('heroTag'),
+      sig:    g('heroSig'),
+      sub:    g('heroSub'),
+      imgUrl: document.getElementById('heroImg') ? (document.getElementById('heroImg').style.backgroundImage.replace(/url\(['"]?/,'').replace(/['"]?\)/,'')) : '',
+      videoUrl: document.getElementById('heroVideoEl') ? document.getElementById('heroVideoEl').src : '',
+    },
+    cards,
+    feature: {
+      tag:   g('featTag'),
+      title: document.getElementById('featTitle') ? document.getElementById('featTitle').innerHTML : '',
+      text:  g('featText'),
+      img:   gi('featImg'),
+    },
+    love: [g('love1'), g('love2'), g('love3')],
+  };
+}
+
+async function savePageData() {
+  const data = collectPageData();
+  const json = JSON.stringify(data);
+  try { localStorage.setItem('sr_page_data', json); } catch(e) {}
+  const sb = await initSupabase();
+  if(sb) {
+    sb.from('recipes')
+      .upsert({id:'page_content', data:json, updated_at: new Date().toISOString()}, {onConflict:'id'})
+      .then(({error}) => { if(error) console.error('save page error:', error); else console.log('✅ Page saved!'); });
+  }
+}
+
+async function loadPageData() {
+  let data = null;
+  const sb = await initSupabase();
+  if(sb) {
+    try {
+      const {data:row, error} = await sb.from('recipes').select('data').eq('id','page_content').single();
+      if(!error && row?.data) data = JSON.parse(row.data);
+    } catch(e) {}
+  }
+  if(!data) {
+    try { const local = localStorage.getItem('sr_page_data'); if(local) data = JSON.parse(local); } catch(e) {}
+  }
+  if(!data) return;
+
+  // שחזר hero
+  if(data.hero) {
+    const h = data.hero;
+    if(h.videoUrl) {
+      setHeroMedia(h.videoUrl, 'video');
+    } else if(h.imgUrl && h.imgUrl !== 'HERO_IMAGE_URL') {
+      setHeroMedia(h.imgUrl, 'image');
+    }
+    if(h.tag) document.getElementById('heroTag').textContent = h.tag;
+    if(h.sig) document.getElementById('heroSig').textContent = h.sig;
+    if(h.sub) document.getElementById('heroSub').textContent = h.sub;
+  }
+
+  // שחזר כרטיסים
+  if(data.cards) {
+    data.cards.forEach((c, i) => {
+      const n = i + 1;
+      const img = document.getElementById(`card${n}Img`);
+      if(img && c.img) img.src = c.img;
+      const cat = document.getElementById(`card${n}Cat`);
+      if(cat && c.cat) cat.textContent = c.cat;
+      const title = document.getElementById(`card${n}Title`);
+      if(title && c.title) title.textContent = c.title;
+      const who = document.getElementById(`card${n}Who`);
+      if(who && c.who) who.textContent = c.who;
+    });
+  }
+
+  // שחזר feature
+  if(data.feature) {
+    const f = data.feature;
+    if(f.tag) document.getElementById('featTag').textContent = f.tag;
+    if(f.title) document.getElementById('featTitle').innerHTML = f.title;
+    if(f.text) document.getElementById('featText').textContent = f.text;
+    if(f.img) document.getElementById('featImg').src = f.img;
+  }
+
+  // שחזר love strip
+  if(data.love) {
+    ['love1','love2','love3'].forEach((id,i) => {
+      const el = document.getElementById(id);
+      if(el && data.love[i]) el.textContent = data.love[i];
+    });
+  }
+}
+
+// טען בעמוד נטען
+window.addEventListener('DOMContentLoaded', () => {
+  setTimeout(loadPageData, 500);
+});
+
 function exportHTML() {
   const html = document.documentElement.outerHTML;
   const blob = new Blob([html], {type: 'text/html'});
