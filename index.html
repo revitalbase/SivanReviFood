@@ -36,6 +36,40 @@ body { font-family: 'Heebo', sans-serif; background: var(--cream); color: var(--
 }
 .edit-toggle:hover { background: var(--gold-dark); transform: translateY(-2px); }
 
+/* QUICK ADD MODAL */
+.overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.72);backdrop-filter:blur(7px);z-index:1000;align-items:center;justify-content:center;padding:16px;}
+.overlay.open{display:flex;animation:fadeIn .25s ease;}
+@keyframes fadeIn{from{opacity:0}to{opacity:1}}
+.modal{background:#fff;border-radius:18px;width:100%;max-width:560px;max-height:92vh;overflow-y:auto;box-shadow:0 28px 80px rgba(0,0,0,.4);}
+.modal-hdr{background:var(--dark);padding:22px 26px 18px;border-radius:18px 18px 0 0;position:sticky;top:0;z-index:10;}
+.modal-hdr h2{font-family:'Playfair Display',serif;color:#fff;font-size:20px;margin-bottom:3px;}
+.modal-hdr p{color:var(--gold);font-size:13px;font-weight:300;}
+.modal-x{position:absolute;top:16px;left:16px;background:rgba(255,255,255,.15);border:none;color:#fff;width:32px;height:32px;border-radius:50%;font-size:15px;cursor:pointer;display:flex;align-items:center;justify-content:center;}
+.modal-body{padding:24px 26px;}
+.fg{margin-bottom:18px;}
+.fl{display:block;font-size:11px;font-weight:600;letter-spacing:1px;color:#888;margin-bottom:6px;text-transform:uppercase;}
+.fi,.ft{width:100%;background:#faf8f5;border:1.5px solid var(--border);border-radius:9px;padding:10px 14px;font-family:'Heebo',sans-serif;font-size:14px;color:var(--dark);outline:none;transition:.2s;}
+.fi:focus,.ft:focus{border-color:var(--gold);}
+.ft{min-height:88px;resize:vertical;}
+.url-row{display:flex;gap:8px;}
+.url-row .fi{flex:1;}
+.btn-fetch{background:#7A9E7E;color:#fff;border:none;border-radius:9px;padding:10px 14px;font-family:'Heebo',sans-serif;font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap;}
+.btn-fetch:disabled{opacity:.5;}
+.ob{background:#faf8f5;border:1.5px solid var(--border);border-radius:9px;padding:9px 6px;text-align:center;cursor:pointer;font-size:12px;font-family:'Heebo',sans-serif;color:#666;}
+.ob.sel{background:var(--gold);border-color:var(--gold);color:#fff;font-weight:600;}
+.ob .e{font-size:18px;display:block;margin-bottom:3px;}
+.og{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;}
+.btn-save-modal{width:100%;background:var(--gold);color:#fff;border:none;border-radius:11px;padding:14px;font-family:'Heebo',sans-serif;font-size:15px;font-weight:700;cursor:pointer;margin-top:6px;}
+.btn-save-modal:hover{background:var(--gold-dark);}
+.proc-overlay{display:none;position:fixed;inset:0;background:rgba(250,248,245,.9);backdrop-filter:blur(4px);z-index:2000;flex-direction:column;align-items:center;justify-content:center;gap:14px;}
+.proc-overlay.show{display:flex;}
+.spinner{width:42px;height:42px;border:3px solid var(--border);border-top-color:var(--gold);border-radius:50%;animation:spin .8s linear infinite;}
+@keyframes spin{to{transform:rotate(360deg)}}
+.proc-msg{font-size:15px;font-weight:600;color:var(--dark);}
+.notif{position:fixed;bottom:80px;left:50%;transform:translateX(-50%);background:var(--dark);color:#fff;padding:10px 22px;border-radius:50px;font-size:14px;font-weight:500;z-index:3000;opacity:0;transition:.3s;pointer-events:none;white-space:nowrap;}
+.notif.show{opacity:1;}
+.drag-on{border-color:var(--gold)!important;background:#fdf6ec!important;}
+
 /* EDIT PANEL */
 .edit-panel {
   display: none;
@@ -165,6 +199,7 @@ body { font-family: 'Heebo', sans-serif; background: var(--cream); color: var(--
   .ep-save-bar { width: 100%; }
 }
 </style>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
 
@@ -175,7 +210,7 @@ body { font-family: 'Heebo', sans-serif; background: var(--cream); color: var(--
     <a href="#">קטגוריות</a>
     <a href="#">מועדפים</a>
   </div>
-  <button class="nav-btn">+ הוסיפי מתכון</button>
+  <button class="nav-btn" onclick="openQuickAdd()">+ הוסיפי מתכון</button>
 </nav>
 
 <div class="hero">
@@ -315,6 +350,64 @@ body { font-family: 'Heebo', sans-serif; background: var(--cream); color: var(--
   <div class="footer-logo">Sivan <span>&</span> Revi — המטבח שלנו</div>
   <div class="footer-heart">עשוי באהבה ♥</div>
 </div>
+
+<!-- QUICK ADD MODAL -->
+<div class="overlay" id="quickModal">
+ <div class="modal">
+  <div class="modal-hdr" style="position:relative">
+   <button class="modal-x" onclick="closeQuickModal()">✕</button>
+   <h2>✨ הוסיפי מתכון</h2>
+   <p>לינק + טקסט → שמירה בקליק אחד</p>
+  </div>
+  <div class="modal-body">
+   <div class="fg">
+    <label class="fl">🔗 לינק (אינסטגרם / יוטיוב / כל אתר)</label>
+    <div class="url-row">
+     <input class="fi" id="qUrlIn" placeholder="https://..." oninput="onQuickUrlTyped()" />
+     <button class="btn-fetch" id="qFetchBtn" onclick="quickFetchThumb()">📸 שלוף</button>
+    </div>
+    <div id="qThumbPreview" style="display:none;margin-top:10px;border-radius:10px;overflow:hidden;border:1.5px solid var(--border)">
+     <img id="qThumbImg" style="width:100%;height:130px;object-fit:cover;display:block" />
+    </div>
+   </div>
+   <div class="fg">
+    <label class="fl">📋 טקסט מהפוסט / תגובה</label>
+    <textarea class="ft" id="qTextIn" rows="4" placeholder="הדביקי כאן את הטקסט — מצרכים, שלבים, כל מה שיש..." style="min-height:100px;font-size:13px"></textarea>
+   </div>
+   <div class="fg">
+    <label class="fl">🖼️ תמונה (אופציונלי)</label>
+    <div id="qImgDrop"
+      ondragover="event.preventDefault();this.classList.add('drag-on')"
+      ondragleave="this.classList.remove('drag-on')"
+      ondrop="handleQImgDrop(event)"
+      onclick="document.getElementById('qImgFile').click()"
+      style="border:2px dashed var(--border);border-radius:10px;padding:16px;text-align:center;cursor:pointer;background:#faf8f5;position:relative">
+     <input type="file" id="qImgFile" accept="image/*" style="display:none" onchange="handleQImgFile(event)" />
+     <div id="qImgPlaceholder" style="color:#aaa;font-size:13px">📸 גררי תמונה או לחצי להעלאה</div>
+     <img id="qImgPreview" style="display:none;width:100%;max-height:160px;object-fit:cover;border-radius:8px" />
+     <button id="qImgClear" onclick="event.stopPropagation();clearQImg()" style="display:none;position:absolute;top:8px;left:8px;background:rgba(0,0,0,.5);border:none;color:#fff;border-radius:50%;width:26px;height:26px;cursor:pointer;font-size:13px">✕</button>
+    </div>
+   </div>
+   <div class="fg">
+    <label class="fl">🙋 מי מוסיפה?</label>
+    <div class="og" style="grid-template-columns:repeat(3,1fr)" id="qAuGrid">
+     <button class="ob" onclick="pickQAu(this,'סיון')"><span class="e">💃</span>סיון</button>
+     <button class="ob" onclick="pickQAu(this,'רוי')"><span class="e">🕺</span>רוי</button>
+     <button class="ob" onclick="pickQAu(this,'ביחד')" style="border-style:dashed"><span class="e">💑</span>ביחד</button>
+    </div>
+   </div>
+   <button class="btn-save-modal" onclick="quickSave()" id="qSaveBtn">✨ חלצי ושמרי מתכון</button>
+  </div>
+ </div>
+</div>
+
+<!-- PROCESSING -->
+<div class="proc-overlay" id="procOverlay">
+ <div class="spinner"></div>
+ <div class="proc-msg" id="procMsg">מחלצת מתכון...</div>
+</div>
+
+<div class="notif" id="notif"></div>
 
 <!-- כפתור עריכה -->
 <button class="edit-toggle" id="editToggle" onclick="toggleEdit()">✏️ מצב עריכה</button>
@@ -605,6 +698,184 @@ function applyLove() {
   alert('✅ רצועת האהבה עודכנה!');
 }
 
+// ── SUPABASE + RECIPES ──
+let _sb = null;
+async function initSupabase(){
+  if(_sb) return _sb;
+  try{
+    const res = await fetch('/api/config');
+    const cfg = await res.json();
+    if(cfg.supabaseUrl && cfg.supabaseKey){
+      _sb = supabase.createClient(cfg.supabaseUrl, cfg.supabaseKey, {auth:{persistSession:false}});
+    }
+  }catch(e){}
+  return _sb;
+}
+
+let srRecipes = [];
+
+async function loadSRRecipes(){
+  const sb = await initSupabase();
+  if(sb){
+    try{
+      const {data,error} = await sb.from('recipes').select('data').eq('id','shared').single();
+      if(!error && data?.data){
+        const p = JSON.parse(data.data);
+        if(Array.isArray(p)) return p;
+      }
+    }catch(e){}
+  }
+  try{
+    const local = localStorage.getItem('sr_recipes');
+    if(local){ const p=JSON.parse(local); if(Array.isArray(p)) return p; }
+  }catch(e){}
+  return [];
+}
+
+async function saveSRRecipes(){
+  const json = JSON.stringify(srRecipes);
+  try{ localStorage.setItem('sr_recipes', json); }catch(e){}
+  const sb = await initSupabase();
+  if(sb){
+    sb.from('recipes').upsert({id:'shared',data:json,updated_at:new Date().toISOString()},{onConflict:'id'})
+      .then(({error})=>{ if(error) console.error('save error:',error); else console.log('✅ Saved!'); });
+  }
+}
+
+function toast(m){
+  const e=document.getElementById('notif');
+  if(!e) return;
+  e.textContent=m; e.classList.add('show');
+  setTimeout(()=>e.classList.remove('show'),3000);
+}
+
+function ytId(url){
+  const m=(url||'').match(/(?:youtube\.com\/(?:shorts\/|watch\?v=|embed\/)|youtu\.be\/)([A-Za-z0-9_-]{11})/);
+  return m?m[1]:null;
+}
+
+let qSelAu = '';
+let qImgData = '';
+
+function openQuickAdd(){
+  qSelAu=''; qImgData='';
+  document.getElementById('qUrlIn').value='';
+  document.getElementById('qTextIn').value='';
+  document.getElementById('qThumbPreview').style.display='none';
+  document.querySelectorAll('#qAuGrid .ob').forEach(b=>b.classList.remove('sel'));
+  clearQImg();
+  document.getElementById('quickModal').classList.add('open');
+  setTimeout(()=>document.getElementById('qUrlIn').focus(),200);
+}
+
+function closeQuickModal(){
+  document.getElementById('quickModal').classList.remove('open');
+}
+
+function pickQAu(btn,v){
+  document.querySelectorAll('#qAuGrid .ob').forEach(b=>b.classList.remove('sel'));
+  btn.classList.add('sel'); qSelAu=v;
+}
+
+function onQuickUrlTyped(){
+  const url=document.getElementById('qUrlIn').value.trim();
+  const vid=ytId(url);
+  const preview=document.getElementById('qThumbPreview');
+  if(vid){ document.getElementById('qThumbImg').src=`https://i.ytimg.com/vi/${vid}/mqdefault.jpg`; preview.style.display='block'; }
+  else { preview.style.display='none'; }
+}
+
+function showQThumb(src){
+  const preview=document.getElementById('qThumbPreview');
+  document.getElementById('qThumbImg').src=src;
+  preview.style.display='block';
+  preview.dataset.thumbUrl=src;
+}
+
+async function quickFetchThumb(){
+  const url=document.getElementById('qUrlIn').value.trim();
+  if(!url){ toast('❗ הדביקי לינק תחילה'); return; }
+  const btn=document.getElementById('qFetchBtn');
+  btn.disabled=true; btn.textContent='⏳';
+  const vid=ytId(url);
+  if(vid){ showQThumb(`https://i.ytimg.com/vi/${vid}/mqdefault.jpg`); btn.disabled=false; btn.textContent='📸 שלוף'; toast('✅ תמונה נשלפה!'); return; }
+  try{
+    const res=await fetch(`/api/thumb?url=${encodeURIComponent(url)}`);
+    const d=await res.json();
+    if(d.thumb) showQThumb(d.thumb);
+    if(d.text&&d.text.length>50){ const tf=document.getElementById('qTextIn'); if(!tf.value.trim()) tf.value=d.text; }
+    toast(d.thumb?'✅ תמונה נשלפה!':'💡 לא נמצאה תמונה — הדביקי ידנית');
+  }catch(e){ toast('💡 שגיאה — הדביקי טקסט ידנית'); }
+  btn.disabled=false; btn.textContent='📸 שלוף';
+}
+
+function handleQImgFile(e){ const f=e.target.files[0]; if(!f) return; const rd=new FileReader(); rd.onload=ev=>setQImg(ev.target.result); rd.readAsDataURL(f); }
+function handleQImgDrop(e){ e.preventDefault(); document.getElementById('qImgDrop').classList.remove('drag-on'); const f=e.dataTransfer.files[0]; if(!f||!f.type.startsWith('image/')) return; const rd=new FileReader(); rd.onload=ev=>setQImg(ev.target.result); rd.readAsDataURL(f); }
+function setQImg(src){ qImgData=src; const prev=document.getElementById('qImgPreview'); const ph=document.getElementById('qImgPlaceholder'); const clr=document.getElementById('qImgClear'); if(prev){prev.src=src;prev.style.display='block';} if(ph)ph.style.display='none'; if(clr)clr.style.display='block'; toast('✅ תמונה נטענה!'); }
+function clearQImg(){ qImgData=''; const prev=document.getElementById('qImgPreview'); const ph=document.getElementById('qImgPlaceholder'); const clr=document.getElementById('qImgClear'); const fi=document.getElementById('qImgFile'); if(prev){prev.src='';prev.style.display='none';} if(ph)ph.style.display='block'; if(clr)clr.style.display='none'; if(fi)fi.value=''; }
+
+async function quickSave(){
+  const url=document.getElementById('qUrlIn').value.trim();
+  const text=document.getElementById('qTextIn').value.trim();
+  if(!text&&!url){ toast('❗ הדביקי לינק או טקסט'); return; }
+  if(!qSelAu){ toast('❗ בחרי מי מוסיפה'); return; }
+  const btn=document.getElementById('qSaveBtn');
+  const ov=document.getElementById('procOverlay');
+  btn.disabled=true; ov.classList.add('show');
+  document.getElementById('procMsg').textContent='מחלצת ומתרגמת מתכון... ✨';
+  const cats='אסיאתי/ראשונות/עיקריות/קינוחים/מרקים/סלטים/דג/בשר/ירקות/לחמים/שתייה/נשנושים';
+  const rules=`תרגם לעברית. החזר JSON בלבד: {"name":"שם","category":"מתוך: ${cats}","prepTime":"X דקות","servings":"X מנות","ingredients":["מצרך","..."],"steps":["שלב","..."]}`;
+  const msgContent=text?`חלץ מתכון מהטקסט:
+
+${text.substring(0,5000)}
+
+${url?'לינק: '+url:''}
+
+${rules}`:`זהה מתכון מהלינק: ${url}
+
+${rules}`;
+  let recipe=null;
+  try{
+    const res=await fetch('/api/claude',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:2000,messages:[{role:'user',content:msgContent}]})});
+    const d=await res.json();
+    if(d.error) throw new Error(d.error.message);
+    const txt=d.content[0].text.trim().replace(/^```(?:json)?\s*/,'').replace(/\s*```$/,'').trim();
+    recipe=JSON.parse(txt);
+  }catch(e){ ov.classList.remove('show'); btn.disabled=false; toast('❌ שגיאה: '+e.message.substring(0,60)); return; }
+  const vid=ytId(url||'');
+  const savedThumb=document.getElementById('qThumbPreview')?.dataset?.thumbUrl||'';
+  const thumb=vid?`https://i.ytimg.com/vi/${vid}/mqdefault.jpg`:savedThumb;
+  const r={id:Date.now(),name:recipe.name||'מתכון חדש',url:url||'',category:recipe.category||'עיקרית',author:qSelAu,ingredients:(recipe.ingredients||[]).join('\n'),steps:(recipe.steps||[]).join('\n'),prepTime:recipe.prepTime||'',servings:recipe.servings||'',thumb:qImgData||thumb,image:qImgData,date:new Date().toLocaleDateString('he-IL')};
+  srRecipes.unshift(r);
+  await saveSRRecipes();
+  closeQuickModal();
+  ov.classList.remove('show'); btn.disabled=false;
+  toast(`🎉 "${r.name}" נשמר!`);
+  renderNewCard(r);
+}
+
+function renderNewCard(r){
+  const grid=document.querySelector('.grid');
+  if(!grid) return;
+  const card=document.createElement('div');
+  card.className='card';
+  card.innerHTML=`
+    <div class="card-img">
+      <img src="${r.thumb||''}" onerror="this.style.display='none'" />
+      <div class="card-accent"></div>
+    </div>
+    <div class="card-body">
+      <div class="card-cat">${r.category}</div>
+      <div class="card-title">${r.name}</div>
+      <div class="card-meta">
+        <div class="card-stars">★★★★★</div>
+        <div class="card-who">${r.author}</div>
+      </div>
+    </div>`;
+  grid.insertBefore(card, grid.firstChild);
+}
+
+// ── exportHTML ──
 function exportHTML() {
   const html = document.documentElement.outerHTML;
   const blob = new Blob([html], {type: 'text/html'});
