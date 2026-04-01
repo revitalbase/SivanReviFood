@@ -30,14 +30,17 @@ body { font-family: 'Heebo', sans-serif; background: var(--cream); color: var(--
 
 /* EDIT MODE BUTTON */
 .edit-toggle {
-  position: fixed; bottom: 24px; left: 24px; z-index: 9999;
-  background: var(--gold); color: #fff; border: none;
-  padding: 12px 20px; border-radius: 50px;
-  font-family: 'Heebo', sans-serif; font-size: 13px; font-weight: 500;
-  cursor: pointer; box-shadow: 0 4px 20px rgba(201,169,110,.4);
-  transition: .2s; display: flex; align-items: center; gap: 8px;
+  position: fixed; bottom: 16px; left: 16px; z-index: 9999;
+  background: rgba(201,169,110,.15);
+  color: var(--gold);
+  border: 1px solid rgba(201,169,110,.3);
+  padding: 6px 12px; border-radius: 20px;
+  font-family: 'Heebo', sans-serif; font-size: 11px; font-weight: 500;
+  cursor: pointer; backdrop-filter: blur(4px);
+  transition: .2s; display: flex; align-items: center; gap: 5px;
+  opacity: 0.5;
 }
-.edit-toggle:hover { background: var(--gold-dark); transform: translateY(-2px); }
+.edit-toggle:hover { opacity: 1; background: var(--gold); color: #fff; border-color: var(--gold); }
 
 /* QUICK ADD MODAL */
 .overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.72);backdrop-filter:blur(7px);z-index:1000;align-items:center;justify-content:center;padding:16px;}
@@ -72,6 +75,24 @@ body { font-family: 'Heebo', sans-serif; background: var(--cream); color: var(--
 .notif{position:fixed;bottom:80px;left:50%;transform:translateX(-50%);background:var(--dark);color:#fff;padding:10px 22px;border-radius:50px;font-size:14px;font-weight:500;z-index:3000;opacity:0;transition:.3s;pointer-events:none;white-space:nowrap;}
 .notif.show{opacity:1;}
 .drag-on{border-color:var(--gold)!important;background:#fdf6ec!important;}
+.tried-toggle{display:flex;border-radius:50px;overflow:hidden;border:1.5px solid var(--border);background:#faf8f5;}
+.tried-toggle button{border:none;background:none;padding:5px 13px;font-family:'Heebo',sans-serif;font-size:12px;font-weight:600;cursor:pointer;transition:.2s;color:#999;}
+.tried-toggle button.active-yes{background:#7A9E7E;color:#fff;}
+.tried-toggle button.active-no{background:var(--gold-dark);color:#fff;}
+.card-bottom{padding:10px 18px 14px;border-top:0.5px solid var(--border);display:flex;align-items:center;justify-content:space-between;}
+
+/* ALL RECIPES MODAL */
+.all-recipes-modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,.75);backdrop-filter:blur(8px);z-index:500;overflow-y:auto;padding:40px 20px;}
+.all-recipes-modal.open{display:block;}
+.all-recipes-inner{max-width:1100px;margin:0 auto;background:#faf8f5;border-radius:18px;padding:40px;position:relative;}
+.all-recipes-close{position:absolute;top:20px;left:20px;background:var(--dark);color:#fff;border:none;width:36px;height:36px;border-radius:50%;font-size:16px;cursor:pointer;}
+.all-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:20px;margin-top:24px;}
+@media(max-width:768px){.all-grid{grid-template-columns:1fr;}}
+
+/* HOMEPAGE SLOTS — תמיד 9 */
+.home-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:24px;}
+.card-empty{background:#fff;border:2px dashed var(--border);border-radius:8px;display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:300px;color:#ccc;font-size:14px;gap:8px;cursor:pointer;}
+.card-empty:hover{border-color:var(--gold);color:var(--gold);}
 
 /* EDIT PANEL */
 .edit-panel {
@@ -246,10 +267,10 @@ body { font-family: 'Heebo', sans-serif; background: var(--cream); color: var(--
 
 <div class="section" style="background: var(--cream)">
   <div class="section-header">
-    <h2 class="section-title">המתכונים <em>האחרונים</em> שלנו</h2>
-    <a class="section-link" href="#">לכל המתכונים ←</a>
+    <h2 class="section-title">המתכונים <em>שלנו</em></h2>
+    <a class="section-link" href="#" onclick="event.preventDefault();openAllRecipes()">כל המתכונים ←</a>
   </div>
-  <div class="grid">
+  <div class="home-grid" id="homeGrid">
     <div class="card">
       <div class="card-img">
         <img id="card1Img" src="https://res.cloudinary.com/dt3n4di9i/image/upload/v1774972052/IMG_9063_zgziqt.jpg"/image/upload/v1774972052/IMG_9063_zgziqt.jpg" />
@@ -270,6 +291,12 @@ body { font-family: 'Heebo', sans-serif; background: var(--cream); color: var(--
           <span class="rating-count" id="rcount1"></span>
           </div>
           <div class="card-who" id="card1Who">סיון</div>
+        </div>
+      </div>
+      <div class="card-bottom">
+        <div class="tried-toggle" onclick="event.stopPropagation()">
+          <button id="try-yes-1" onclick="setCardTried(1,true)">✅ ניסינו</button>
+          <button id="try-no-1" onclick="setCardTried(1,false)">⏳ לא</button>
         </div>
       </div>
     </div>
@@ -295,6 +322,12 @@ body { font-family: 'Heebo', sans-serif; background: var(--cream); color: var(--
           <div class="card-who" id="card2Who">רוי</div>
         </div>
       </div>
+      <div class="card-bottom">
+        <div class="tried-toggle" onclick="event.stopPropagation()">
+          <button id="try-yes-2" onclick="setCardTried(2,true)">✅ ניסינו</button>
+          <button id="try-no-2" onclick="setCardTried(2,false)">⏳ לא</button>
+        </div>
+      </div>
     </div>
     <div class="card">
       <div class="card-img">
@@ -318,11 +351,16 @@ body { font-family: 'Heebo', sans-serif; background: var(--cream); color: var(--
           <div class="card-who" id="card3Who">ביחד ♥</div>
         </div>
       </div>
+      <div class="card-bottom">
+        <div class="tried-toggle" onclick="event.stopPropagation()">
+          <button id="try-yes-3" onclick="setCardTried(3,true)">✅ ניסינו</button>
+          <button id="try-no-3" onclick="setCardTried(3,false)">⏳ לא</button>
+        </div>
+      </div>
     </div>
   </div>
 
-  <!-- שורה שנייה -->
-  <div class="grid" style="margin-top:24px">
+  <!-- שורה שנייה (המשך homeGrid) -->
     <div class="card">
       <div class="card-img">
         <img id="card4Img" src="https://res.cloudinary.com/dt3n4di9i/image/upload/v1774972069/IMG_3723_rqymqf.jpg"/image/upload/v1774972069/IMG_3723_rqymqf.jpg" />
@@ -343,6 +381,12 @@ body { font-family: 'Heebo', sans-serif; background: var(--cream); color: var(--
           <span class="rating-count" id="rcount4"></span>
           </div>
           <div class="card-who" id="card4Who">סיון</div>
+        </div>
+      </div>
+      <div class="card-bottom">
+        <div class="tried-toggle" onclick="event.stopPropagation()">
+          <button id="try-yes-4" onclick="setCardTried(4,true)">✅ ניסינו</button>
+          <button id="try-no-4" onclick="setCardTried(4,false)">⏳ לא</button>
         </div>
       </div>
     </div>
@@ -368,6 +412,12 @@ body { font-family: 'Heebo', sans-serif; background: var(--cream); color: var(--
           <div class="card-who" id="card5Who">רוי</div>
         </div>
       </div>
+      <div class="card-bottom">
+        <div class="tried-toggle" onclick="event.stopPropagation()">
+          <button id="try-yes-5" onclick="setCardTried(5,true)">✅ ניסינו</button>
+          <button id="try-no-5" onclick="setCardTried(5,false)">⏳ לא</button>
+        </div>
+      </div>
     </div>
     <div class="card">
       <div class="card-img">
@@ -391,7 +441,90 @@ body { font-family: 'Heebo', sans-serif; background: var(--cream); color: var(--
           <div class="card-who" id="card6Who">ביחד ♥</div>
         </div>
       </div>
+      <div class="card-bottom">
+        <div class="tried-toggle" onclick="event.stopPropagation()">
+          <button id="try-yes-6" onclick="setCardTried(6,true)">✅ ניסינו</button>
+          <button id="try-no-6" onclick="setCardTried(6,false)">⏳ לא</button>
+        </div>
+      </div>
     </div>
+    <div class="card" id="card7" style="display:none">
+      <div class="card-img">
+        <img id="card7Img" src="" onerror="this.style.display='none'"/>
+        <div class="card-accent"></div>
+      </div>
+      <div class="card-body">
+        <div class="card-cat" id="card7Cat">קטגוריה</div>
+        <div class="card-title" id="card7Title">מתכון 7</div>
+        <div class="card-meta">
+          <div class="card-stars"><div class="star-rating" id="stars7" data-card="7" data-rating="0"><span data-v="1">★</span><span data-v="2">★</span><span data-v="3">★</span><span data-v="4">★</span><span data-v="5">★</span></div><span class="rating-count" id="rcount7"></span></div>
+          <div class="card-who" id="card7Who">סיון</div>
+        </div>
+      </div>
+      <div class="card-bottom">
+        <div class="tried-toggle" onclick="event.stopPropagation()">
+          <button id="try-yes-7" onclick="setCardTried(7,true)">✅ ניסינו</button>
+          <button id="try-no-7" onclick="setCardTried(7,false)">⏳ לא</button>
+        </div>
+      </div>
+    </div>
+    <div class="card" id="card8" style="display:none">
+      <div class="card-img">
+        <img id="card8Img" src="" onerror="this.style.display='none'"/>
+        <div class="card-accent"></div>
+      </div>
+      <div class="card-body">
+        <div class="card-cat" id="card8Cat">קטגוריה</div>
+        <div class="card-title" id="card8Title">מתכון 8</div>
+        <div class="card-meta">
+          <div class="card-stars"><div class="star-rating" id="stars8" data-card="8" data-rating="0"><span data-v="1">★</span><span data-v="2">★</span><span data-v="3">★</span><span data-v="4">★</span><span data-v="5">★</span></div><span class="rating-count" id="rcount8"></span></div>
+          <div class="card-who" id="card8Who">רוי</div>
+        </div>
+      </div>
+      <div class="card-bottom">
+        <div class="tried-toggle" onclick="event.stopPropagation()">
+          <button id="try-yes-8" onclick="setCardTried(8,true)">✅ ניסינו</button>
+          <button id="try-no-8" onclick="setCardTried(8,false)">⏳ לא</button>
+        </div>
+      </div>
+    </div>
+    <div class="card" id="card9" style="display:none">
+      <div class="card-img">
+        <img id="card9Img" src="" onerror="this.style.display='none'"/>
+        <div class="card-accent"></div>
+      </div>
+      <div class="card-body">
+        <div class="card-cat" id="card9Cat">קטגוריה</div>
+        <div class="card-title" id="card9Title">מתכון 9</div>
+        <div class="card-meta">
+          <div class="card-stars"><div class="star-rating" id="stars9" data-card="9" data-rating="0"><span data-v="1">★</span><span data-v="2">★</span><span data-v="3">★</span><span data-v="4">★</span><span data-v="5">★</span></div><span class="rating-count" id="rcount9"></span></div>
+          <div class="card-who" id="card9Who">ביחד ♥</div>
+        </div>
+      </div>
+      <div class="card-bottom">
+        <div class="tried-toggle" onclick="event.stopPropagation()">
+          <button id="try-yes-9" onclick="setCardTried(9,true)">✅ ניסינו</button>
+          <button id="try-no-9" onclick="setCardTried(9,false)">⏳ לא</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- כפתור כל המתכונים -->
+  <div style="text-align:center;margin-top:36px">
+    <button onclick="openAllRecipes()" style="background:none;border:1.5px solid var(--gold);color:var(--gold);padding:12px 36px;font-family:'Heebo',sans-serif;font-size:14px;cursor:pointer;border-radius:2px;transition:.2s" onmouseover="this.style.background='var(--gold)';this.style.color='#fff'" onmouseout="this.style.background='none';this.style.color='var(--gold)'">
+      לכל המתכונים שלנו →
+    </button>
+  </div>
+</div>
+
+<!-- ALL RECIPES MODAL -->
+<div class="all-recipes-modal" id="allRecipesModal">
+  <div class="all-recipes-inner">
+    <button class="all-recipes-close" onclick="closeAllRecipes()">✕</button>
+    <h2 style="font-family:'Playfair Display',serif;font-size:28px;margin-bottom:4px">כל <em style="color:var(--gold)">המתכונים</em> שלנו</h2>
+    <p style="color:#aaa;font-size:13px" id="allCount"></p>
+    <div class="all-grid" id="allGrid"></div>
   </div>
 </div>
 
@@ -479,7 +612,7 @@ body { font-family: 'Heebo', sans-serif; background: var(--cream); color: var(--
 <div class="notif" id="notif"></div>
 
 <!-- כפתור עריכה -->
-<button class="edit-toggle" id="editToggle" onclick="toggleEdit()" style="display:none">✏️ מצב עריכה</button>
+<button class="edit-toggle" id="editToggle" onclick="handleEditClick()">✏️</button>
 
 <!-- פאנל עריכה -->
 <div class="edit-panel" id="editPanel">
@@ -663,6 +796,15 @@ body { font-family: 'Heebo', sans-serif; background: var(--cream); color: var(--
 
     <!-- LOVE STRIP -->
     <div class="ep-section">
+      <div class="ep-section-title">🏠 כרטיסים בעמוד הבית (בחרי עד 9)</div>
+      <div class="ep-hint" style="margin-bottom:12px">בחרי אילו כרטיסים יופיעו בעמוד הבית. הסדר לפי המספר.</div>
+      <div id="slotPicker" style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:12px">
+        <!-- יתמלא דינמית -->
+      </div>
+      <button class="ep-apply" onclick="applySlotPicker()">✓ עדכני עמוד הבית</button>
+    </div>
+
+    <div class="ep-section">
       <div class="ep-section-title">💛 רצועת האהבה</div>
       <div class="ep-field">
         <label class="ep-label">משפט 1</label>
@@ -693,17 +835,14 @@ body { font-family: 'Heebo', sans-serif; background: var(--cream); color: var(--
 const EDIT_PASSWORD = '0211';
 
 function checkEditAccess() {
-  // בדוק אם כבר מאומת בsession
-  if(sessionStorage.getItem('sr_edit_auth') === '1') {
-    document.getElementById('editToggle').style.display = 'flex';
-    return;
-  }
-  // בדוק אם יש קוד ב-URL: ?edit=0211
+  // תמיד הצג את הכפתור הקטן
+  document.getElementById('editToggle').style.display = 'flex';
+  // בדוק אם כבר מאומת
+  if(sessionStorage.getItem('sr_edit_auth') === '1') return;
+  // בדוק URL
   const params = new URLSearchParams(window.location.search);
   if(params.get('edit') === EDIT_PASSWORD) {
     sessionStorage.setItem('sr_edit_auth', '1');
-    document.getElementById('editToggle').style.display = 'flex';
-    return;
   }
 }
 
@@ -711,10 +850,17 @@ function promptEditPassword() {
   const pw = prompt('🔐 סיסמת עריכה:');
   if(pw === EDIT_PASSWORD) {
     sessionStorage.setItem('sr_edit_auth', '1');
-    document.getElementById('editToggle').style.display = 'flex';
     setTimeout(toggleEdit, 100);
   } else if(pw !== null) {
-    alert('❌ סיסמה שגויה');
+    toast('❌ סיסמה שגויה');
+  }
+}
+
+function handleEditClick() {
+  if(sessionStorage.getItem('sr_edit_auth') === '1') {
+    toggleEdit();
+  } else {
+    promptEditPassword();
   }
 }
 
@@ -728,6 +874,35 @@ window.addEventListener('DOMContentLoaded', () => {
 
 let editMode = false;
 let hasChanges = false;
+
+function buildSlotPicker(){
+  const picker = document.getElementById('slotPicker');
+  if(!picker) return;
+  picker.innerHTML = '';
+  for(let n=1;n<=9;n++){
+    const title = document.getElementById(`card${n}Title`);
+    const name = title ? title.textContent.substring(0,16) : `כרטיס ${n}`;
+    const isOn = homeSlots.includes(n);
+    const btn = document.createElement('button');
+    btn.style.cssText = `padding:8px 4px;border-radius:6px;font-family:'Heebo',sans-serif;font-size:11px;cursor:pointer;transition:.2s;border:1.5px solid ${isOn?'var(--gold)':'var(--border)'};background:${isOn?'var(--gold)':'#fff'};color:${isOn?'#fff':'#666'};text-align:center`;
+    btn.textContent = `${n}. ${name}`;
+    btn.dataset.n = n;
+    btn.onclick = () => {
+      const idx = homeSlots.indexOf(n);
+      if(idx>-1){ homeSlots.splice(idx,1); btn.style.background='#fff'; btn.style.color='#666'; btn.style.borderColor='var(--border)'; }
+      else if(homeSlots.length<9){ homeSlots.push(n); btn.style.background='var(--gold)'; btn.style.color='#fff'; btn.style.borderColor='var(--gold)'; }
+      else { toast('❗ אפשר לבחור עד 9 כרטיסים'); }
+    };
+    picker.appendChild(btn);
+  }
+}
+
+async function applySlotPicker(){
+  homeSlots.sort((a,b)=>a-b);
+  applyHomeSlots();
+  await saveHomeSlots();
+  toast('✅ עמוד הבית עודכן!');
+}
 
 function syncEditPanel() {
   // סנכרן שדות עריכה עם הערכים הנוכחיים מהמסך
@@ -775,10 +950,10 @@ function syncEditPanel() {
 
 function toggleEdit() {
   editMode = !editMode;
-  if(editMode) syncEditPanel();
+  if(editMode){ syncEditPanel(); buildSlotPicker(); }
   document.getElementById('editPanel').classList.toggle('open', editMode);
   document.getElementById('epSaveBar').classList.toggle('open', editMode && hasChanges);
-  document.getElementById('editToggle').textContent = editMode ? '✕ סגרי עריכה' : '✏️ מצב עריכה';
+  document.getElementById('editToggle').textContent = editMode ? '✕' : '✏️';
 }
 
 function markChanged() {
@@ -1337,6 +1512,121 @@ async function loadPageData() {
 }
 
 
+
+// ── ניסינו / לא ניסינו ──
+let srTried = {};
+
+async function loadTried(){
+  try{
+    const sb = await initSupabase();
+    if(sb){
+      const {data} = await sb.from('recipes').select('data').eq('id','sr_tried').single();
+      if(data?.data) srTried = JSON.parse(data.data);
+    } else {
+      const local = localStorage.getItem('sr_tried');
+      if(local) srTried = JSON.parse(local);
+    }
+  }catch(e){}
+  renderTried();
+}
+
+async function saveTried(){
+  const json = JSON.stringify(srTried);
+  try{ localStorage.setItem('sr_tried', json); }catch(e){}
+  const sb = await initSupabase();
+  if(sb) sb.from('recipes').upsert({id:'sr_tried',data:json,updated_at:new Date().toISOString()},{onConflict:'id'});
+}
+
+function renderTried(){
+  for(let n=1;n<=9;n++){
+    const yes = document.getElementById(`try-yes-${n}`);
+    const no = document.getElementById(`try-no-${n}`);
+    if(!yes||!no) continue;
+    const val = srTried[`card${n}`];
+    yes.className = val===true ? 'active-yes' : '';
+    no.className = val===false ? 'active-no' : '';
+  }
+}
+
+async function setCardTried(n, val){
+  const key = `card${n}`;
+  if(srTried[key] === val){ delete srTried[key]; }
+  else { srTried[key] = val; }
+  renderTried();
+  await saveTried();
+  const msg = srTried[key]===true ? '✅ מסומן כ"ניסינו"!' : srTried[key]===false ? '⏳ מסומן כ"לא ניסינו"' : '↩️ הסימון הוסר';
+  toast(msg);
+}
+
+// ── כל המתכונים ──
+let homeSlots = [1,2,3,4,5,6,7,8,9]; // ברירת מחדל
+
+async function loadHomeSlots(){
+  try{
+    const sb = await initSupabase();
+    if(sb){
+      const {data} = await sb.from('recipes').select('data').eq('id','sr_home_slots').single();
+      if(data?.data){ const p=JSON.parse(data.data); if(Array.isArray(p)) homeSlots=p; }
+    } else {
+      const local=localStorage.getItem('sr_home_slots');
+      if(local) homeSlots=JSON.parse(local);
+    }
+  }catch(e){}
+  applyHomeSlots();
+}
+
+async function saveHomeSlots(){
+  const json=JSON.stringify(homeSlots);
+  try{localStorage.setItem('sr_home_slots',json);}catch(e){}
+  const sb=await initSupabase();
+  if(sb) sb.from('recipes').upsert({id:'sr_home_slots',data:json,updated_at:new Date().toISOString()},{onConflict:'id'});
+}
+
+function applyHomeSlots(){
+  // הצג רק הכרטיסים שב-homeSlots
+  for(let n=1;n<=9;n++){
+    const el=document.getElementById(`card${n}`);
+    if(el) el.style.display = homeSlots.includes(n) ? 'flex' : 'none';
+  }
+}
+
+function openAllRecipes(){
+  const all=document.getElementById('allGrid');
+  const count=document.getElementById('allCount');
+  // בנה רשת של כל המתכונים מה-srRecipes + הכרטיסים הקבועים
+  const cards=[];
+  for(let n=1;n<=9;n++){
+    const title=document.getElementById(`card${n}Title`);
+    const cat=document.getElementById(`card${n}Cat`);
+    const img=document.getElementById(`card${n}Img`);
+    const who=document.getElementById(`card${n}Who`);
+    if(title) cards.push({n,title:title.textContent,cat:cat?.textContent||'',img:img?.src||'',who:who?.textContent||''});
+  }
+  // הוסף מתכונים שנוספו דינמית
+  srRecipes.forEach((r,i)=>{
+    cards.push({n:`r${i}`,title:r.name,cat:r.category,img:r.thumb||r.image||'',who:r.author,dynamic:true,recipe:r});
+  });
+  count.textContent = `${cards.length} מתכונים`;
+  all.innerHTML = cards.map(c=>`
+    <div class="card" style="cursor:default">
+      <div class="card-img" style="height:160px">
+        ${c.img?`<img src="${c.img}" style="width:100%;height:100%;object-fit:cover" onerror="this.style.display='none'"/>`:'<div style="height:100%;background:#eee;display:flex;align-items:center;justify-content:center;font-size:32px">🍽️</div>'}
+        <div class="card-accent"></div>
+      </div>
+      <div class="card-body" style="padding:12px">
+        <div class="card-cat" style="font-size:9px;letter-spacing:2px;color:var(--gold);margin-bottom:4px">${c.cat}</div>
+        <div class="card-title" style="font-family:'Playfair Display',serif;font-size:14px;line-height:1.3">${c.title}</div>
+        <div style="font-size:11px;color:#aaa;margin-top:6px">${c.who}</div>
+      </div>
+    </div>`).join('');
+  document.getElementById('allRecipesModal').classList.add('open');
+  document.body.style.overflow='hidden';
+}
+
+function closeAllRecipes(){
+  document.getElementById('allRecipesModal').classList.remove('open');
+  document.body.style.overflow='';
+}
 
 function exportHTML() {
   const html = document.documentElement.outerHTML;
