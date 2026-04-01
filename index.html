@@ -86,7 +86,10 @@ body { font-family: 'Heebo', sans-serif; background: var(--cream); color: var(--
 .all-recipes-modal.open{display:block;}
 .all-recipes-inner{max-width:1100px;margin:0 auto;background:#faf8f5;border-radius:18px;padding:40px;position:relative;}
 .all-recipes-close{position:absolute;top:20px;left:20px;background:var(--dark);color:#fff;border:none;width:36px;height:36px;border-radius:50%;font-size:16px;cursor:pointer;}
-.all-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:20px;margin-top:24px;}
+.all-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:20px;}
+.cat-filter-btn{background:none;border:1.5px solid var(--border);border-radius:50px;padding:6px 14px;font-family:'Heebo',sans-serif;font-size:12px;cursor:pointer;color:#666;transition:.2s;white-space:nowrap;}
+.cat-filter-btn:hover{border-color:var(--gold);color:var(--gold);}
+.cat-filter-btn.active{background:var(--gold);border-color:var(--gold);color:#fff;font-weight:600;}
 @media(max-width:768px){.all-grid{grid-template-columns:1fr;}}
 
 /* HOMEPAGE SLOTS — תמיד 9 */
@@ -277,8 +280,8 @@ body { font-family: 'Heebo', sans-serif; background: var(--cream); color: var(--
         <div class="card-accent"></div>
       </div>
       <div class="card-body">
-        <div class="card-cat" id="card1Cat">דג נא</div>
-        <div class="card-title" id="card1Title">סביצ'ה דג עם מיקרו ירק ופקאן</div>
+        <div class="card-cat" id="card1Cat">דג בהשראת בטשון</div>
+        <div class="card-title" id="card1Title">סביצ'ה דג לבן בהשראת בטשון</div>
         <div class="card-meta">
           <div class="card-stars">
             <div class="star-rating" id="stars1" data-card="1" data-rating="0"><span data-v="1">★</span><span data-v="2">★</span><span data-v="3">★</span><span data-v="4">★</span><span data-v="5">★</span></div>
@@ -301,7 +304,7 @@ body { font-family: 'Heebo', sans-serif; background: var(--cream); color: var(--
       </div>
       <div class="card-body">
         <div class="card-cat" id="card2Cat">עיקרית</div>
-        <div class="card-title" id="card2Title">מלפוף כרוב בתנור</div>
+        <div class="card-title" id="card2Title">מלפוף</div>
         <div class="card-meta">
           <div class="card-stars">
             <div class="star-rating" id="stars2" data-card="2" data-rating="0"><span data-v="1">★</span><span data-v="2">★</span><span data-v="3">★</span><span data-v="4">★</span><span data-v="5">★</span></div>
@@ -492,7 +495,14 @@ body { font-family: 'Heebo', sans-serif; background: var(--cream); color: var(--
   <div class="all-recipes-inner">
     <button class="all-recipes-close" onclick="closeAllRecipes()">✕</button>
     <h2 style="font-family:'Playfair Display',serif;font-size:28px;margin-bottom:4px">כל <em style="color:var(--gold)">המתכונים</em> שלנו</h2>
-    <p style="color:#aaa;font-size:13px" id="allCount"></p>
+    <p style="color:#aaa;font-size:13px;margin-bottom:16px" id="allCount"></p>
+    <!-- פילטר קטגוריות -->
+    <div id="catFilters" style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:24px;padding-bottom:20px;border-bottom:0.5px solid var(--border)">
+      <button class="cat-filter-btn active" data-cat="all" onclick="filterAllRecipes('all',this)">🍽️ הכל</button>
+    </div>
+    <!-- חיפוש -->
+    <input id="allSearch" placeholder="🔍 חיפוש מתכון..." oninput="searchAllRecipes(this.value)"
+      style="width:100%;border:1px solid var(--border);border-radius:6px;padding:10px 14px;font-family:'Heebo',sans-serif;font-size:14px;outline:none;margin-bottom:20px;box-sizing:border-box" />
     <div class="all-grid" id="allGrid"></div>
   </div>
 </div>
@@ -1411,6 +1421,16 @@ function collectPageData() {
 async function savePageData() {
   const data = collectPageData();
   const json = JSON.stringify(data);
+  // שמור גיבוי אוטומטי לפני כל שמירה
+  try {
+    const backup = {
+      pageContent: data,
+      recipes: srRecipes,
+      ratings: srRatings,
+      timestamp: new Date().toISOString()
+    };
+    localStorage.setItem('sr_auto_backup', JSON.stringify(backup));
+  } catch(e) {}
   try { localStorage.setItem('sr_page_data', json); } catch(e) {}
   const sb = await initSupabase();
   if(sb) {
@@ -1452,13 +1472,16 @@ async function loadPageData() {
     data.cards.forEach((c, i) => {
       const n = i + 1;
       const img = document.getElementById(`card${n}Img`);
-      if(img && c.img) img.src = c.img;
+      if(img && c.img){ img.src = c.img; img.style.display = 'block'; }
       const cat = document.getElementById(`card${n}Cat`);
       if(cat && c.cat) cat.textContent = c.cat;
       const title = document.getElementById(`card${n}Title`);
       if(title && c.title) title.textContent = c.title;
       const who = document.getElementById(`card${n}Who`);
       if(who && c.who) who.textContent = c.who;
+      // הצג כרטיסים שיש להם תמונה
+      const cardEl = document.getElementById(`card${n}`);
+      if(cardEl && c.img) cardEl.style.display = '';
     });
   }
 
@@ -1559,42 +1582,94 @@ function applyHomeSlots(){
   }
 }
 
-function openAllRecipes(){
-  const all=document.getElementById('allGrid');
-  const count=document.getElementById('allCount');
-  // בנה רשת של כל המתכונים מה-srRecipes + הכרטיסים הקבועים
-  const cards=[];
+let allRecipesData = [];
+let currentCatFilter = 'all';
+
+function buildAllRecipesData(){
+  const cards = [];
+  // כרטיסים קבועים (1-9)
   for(let n=1;n<=9;n++){
-    const title=document.getElementById(`card${n}Title`);
-    const cat=document.getElementById(`card${n}Cat`);
-    const img=document.getElementById(`card${n}Img`);
-    const who=document.getElementById(`card${n}Who`);
-    if(title) cards.push({n,title:title.textContent,cat:cat?.textContent||'',img:img?.src||'',who:who?.textContent||''});
+    const title = document.getElementById(`card${n}Title`);
+    const cat   = document.getElementById(`card${n}Cat`);
+    const img   = document.getElementById(`card${n}Img`);
+    const who   = document.getElementById(`card${n}Who`);
+    if(title && title.textContent && !title.textContent.includes('מתכון 7') && !title.textContent.includes('מתכון 8') && !title.textContent.includes('מתכון 9')){
+      cards.push({id:`c${n}`, title:title.textContent.trim(), cat:cat?.textContent.trim()||'', img:img?.src||'', who:who?.textContent.trim()||''});
+    }
   }
-  // הוסף מתכונים שנוספו דינמית
+  // מתכונים דינמיים
   srRecipes.forEach((r,i)=>{
-    cards.push({n:`r${i}`,title:r.name,cat:r.category,img:r.thumb||r.image||'',who:r.author,dynamic:true,recipe:r});
+    cards.push({id:`r${i}`, title:r.name, cat:r.category||'', img:r.thumb||r.image||'', who:r.author||''});
   });
+  return cards;
+}
+
+function buildCatFilters(cards){
+  const cats = ['all', ...new Set(cards.map(c=>c.cat).filter(Boolean))];
+  const container = document.getElementById('catFilters');
+  container.innerHTML = cats.map(cat=>`
+    <button class="cat-filter-btn${cat==='all'?' active':''}" data-cat="${cat}" onclick="filterAllRecipes('${cat}',this)">
+      ${cat==='all'?'🍽️ הכל':cat}
+    </button>`).join('');
+}
+
+function renderAllGrid(cards){
+  const grid = document.getElementById('allGrid');
+  const count = document.getElementById('allCount');
   count.textContent = `${cards.length} מתכונים`;
-  all.innerHTML = cards.map(c=>`
+  if(!cards.length){
+    grid.innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:40px;color:#aaa;font-size:14px">לא נמצאו מתכונים</div>';
+    return;
+  }
+  grid.innerHTML = cards.map(c=>`
     <div class="card" style="cursor:default">
       <div class="card-img" style="height:160px">
-        ${c.img?`<img src="${c.img}" style="width:100%;height:100%;object-fit:cover" onerror="this.style.display='none'"/>`:'<div style="height:100%;background:#eee;display:flex;align-items:center;justify-content:center;font-size:32px">🍽️</div>'}
+        ${c.img && !c.img.endsWith('undefined')
+          ? `<img src="${c.img}" style="width:100%;height:100%;object-fit:cover" onerror="this.style.display='none'"/>`
+          : '<div style="height:100%;background:var(--border);display:flex;align-items:center;justify-content:center;font-size:36px">🍽️</div>'}
         <div class="card-accent"></div>
       </div>
-      <div class="card-body" style="padding:12px">
-        <div class="card-cat" style="font-size:9px;letter-spacing:2px;color:var(--gold);margin-bottom:4px">${c.cat}</div>
-        <div class="card-title" style="font-family:'Playfair Display',serif;font-size:14px;line-height:1.3">${c.title}</div>
-        <div style="font-size:11px;color:#aaa;margin-top:6px">${c.who}</div>
+      <div class="card-body" style="padding:14px">
+        <div style="font-size:9px;letter-spacing:2px;color:var(--gold);margin-bottom:5px;text-transform:uppercase">${c.cat}</div>
+        <div style="font-family:'Playfair Display',serif;font-size:15px;line-height:1.35;color:#1a1a1a;margin-bottom:8px">${c.title}</div>
+        <div style="font-size:11px;color:#aaa">${c.who}</div>
       </div>
     </div>`).join('');
+}
+
+function filterAllRecipes(cat, btn){
+  currentCatFilter = cat;
+  document.querySelectorAll('.cat-filter-btn').forEach(b=>b.classList.remove('active'));
+  if(btn) btn.classList.add('active');
+  const search = document.getElementById('allSearch')?.value.trim().toLowerCase() || '';
+  let filtered = allRecipesData;
+  if(cat !== 'all') filtered = filtered.filter(c=>c.cat===cat);
+  if(search) filtered = filtered.filter(c=>c.title.toLowerCase().includes(search)||c.cat.toLowerCase().includes(search));
+  renderAllGrid(filtered);
+}
+
+function searchAllRecipes(q){
+  const search = q.trim().toLowerCase();
+  let filtered = allRecipesData;
+  if(currentCatFilter !== 'all') filtered = filtered.filter(c=>c.cat===currentCatFilter);
+  if(search) filtered = filtered.filter(c=>c.title.toLowerCase().includes(search)||c.cat.toLowerCase().includes(search)||c.who.toLowerCase().includes(search));
+  renderAllGrid(filtered);
+  document.getElementById('allCount').textContent = `${filtered.length} מתכונים`;
+}
+
+function openAllRecipes(){
+  allRecipesData = buildAllRecipesData();
+  buildCatFilters(allRecipesData);
+  currentCatFilter = 'all';
+  document.getElementById('allSearch').value = '';
+  renderAllGrid(allRecipesData);
   document.getElementById('allRecipesModal').classList.add('open');
-  document.body.style.overflow='hidden';
+  document.body.style.overflow = 'hidden';
 }
 
 function closeAllRecipes(){
   document.getElementById('allRecipesModal').classList.remove('open');
-  document.body.style.overflow='';
+  document.body.style.overflow = '';
 }
 
 function exportHTML() {
