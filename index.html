@@ -280,7 +280,7 @@ body { font-family: 'Heebo', sans-serif; background: var(--cream); color: var(--
         <div class="card-accent"></div>
       </div>
       <div class="card-body">
-        <div class="card-cat" id="card1Cat">דג בהשראת בטשון</div>
+        <div class="card-cat" id="card1Cat">דג בהשראת  בטשון</div>
         <div class="card-title" id="card1Title">סביצ'ה דג לבן בהשראת בטשון</div>
         <div class="card-meta">
           <div class="card-stars">
@@ -1242,27 +1242,40 @@ function renderNewCard(r){
 let srRatings = {};
 
 async function loadRatings(){
+  // קודם נסה localStorage (מהיר)
+  try{
+    const local = localStorage.getItem('sr_ratings');
+    if(local){ srRatings = JSON.parse(local); renderRatings(); }
+  }catch(e){}
+
+  // אחר כך Supabase (מדויק יותר)
   try{
     const sb = await initSupabase();
     if(sb){
       const {data,error} = await sb.from('recipes').select('data').eq('id','sr_ratings').single();
-      if(!error && data?.data) srRatings = JSON.parse(data.data);
-    } else {
-      const local = localStorage.getItem('sr_ratings');
-      if(local) srRatings = JSON.parse(local);
+      if(!error && data?.data){
+        srRatings = JSON.parse(data.data);
+        // עדכן גם localStorage
+        try{ localStorage.setItem('sr_ratings', data.data); }catch(e){}
+        renderRatings();
+      }
     }
-  }catch(e){}
-  renderRatings();
+  }catch(e){ console.log('loadRatings error:', e); }
 }
 
 async function saveRatings(){
   const json = JSON.stringify(srRatings);
+  // שמור ל-localStorage מיד
   try{ localStorage.setItem('sr_ratings', json); }catch(e){}
-  const sb = await initSupabase();
-  if(sb){
-    sb.from('recipes').upsert({id:'sr_ratings',data:json,updated_at:new Date().toISOString()},{onConflict:'id'})
-      .then(({error})=>{ if(!error) console.log('⭐ ratings saved'); });
-  }
+  // שמור ל-Supabase
+  try{
+    const sb = await initSupabase();
+    if(sb){
+      const {error} = await sb.from('recipes').upsert({id:'sr_ratings',data:json,updated_at:new Date().toISOString()},{onConflict:'id'});
+      if(error) console.error('save ratings error:', error);
+      else console.log('⭐ ratings saved to Supabase');
+    }
+  }catch(e){ console.error('saveRatings error:', e); }
 }
 
 function renderRatings(){
