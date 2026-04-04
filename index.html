@@ -238,9 +238,9 @@ body { font-family: 'Heebo', sans-serif; background: var(--cream); color: var(--
 <nav class="nav">
   <div class="nav-logo">Sivan <span>&</span> Revi</div>
   <div class="nav-links">
-    <a href="#">המתכונים שלנו</a>
-    <a href="#">קטגוריות</a>
-    <a href="#">מועדפים</a>
+    <a href="#" onclick="event.preventDefault();openAllRecipes()">המתכונים שלנו</a>
+    <a href="#" onclick="event.preventDefault();openAllRecipes()">קטגוריות</a>
+    <a href="#" onclick="event.preventDefault();openAllRecipes()">מועדפים</a>
   </div>
   <div class="nav-actions">
     <button class="nav-backup" onclick="manualBackup()" title="גיבוי">💾 גיבוי</button>
@@ -263,7 +263,7 @@ body { font-family: 'Heebo', sans-serif; background: var(--cream); color: var(--
     <div class="hero-tag" id="heroTag">Our kitchen, our love</div>
     <h1 class="hero-title" id="heroTitle">Cooking together<br>is <em>love</em> made<br>visible</h1>
     <p class="hero-sub" id="heroSub">A private collection of recipes we love, discovered and made together.</p>
-    <button class="hero-cta" id="heroCta">לכל המתכונים שלנו</button>
+    <button class="hero-cta" id="heroCta" onclick="openAllRecipes()">לכל המתכונים שלנו</button>
   </div>
   <div class="hero-sig" id="heroSig">סיון ורוי — מבשלות באהבה ♥</div>
 </div>
