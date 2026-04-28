@@ -1295,35 +1295,51 @@ function handleEditClick() {
 window.addEventListener('DOMContentLoaded', () => {
   checkEditAccess();
   setTimeout(async () => {
-    await loadPageData();
-    srRecipes = await loadSRRecipes();
-    // Render dynamic recipe cards
-    const grid = document.querySelector('.home-grid');
-    if(grid && srRecipes.length){
-      srRecipes.forEach((r,i)=>{
-        const card = document.createElement('div');
-        card.className='card'; card.dataset.dynIdx=i;
-        card.innerHTML=`
-          <div class="card-img">
-            <button class="card-edit-btn" onclick="event.stopPropagation();openEditDynamic(${i})" title="ערכי מתכון">✏️</button>
-            <button class="card-delete-btn" onclick="event.stopPropagation();deleteDynamic(${i})" title="מחקי מתכון">🗑️</button>
-            <img src="${r.thumb||r.image||''}" onerror="this.style.display='none'" />
-            <div class="card-accent"></div>
-          </div>
-          <div class="card-body">
-            <div class="card-cat">${r.category||''}</div>
-            <div class="card-title">${r.name||''}</div>
-            <div class="card-meta">
-              <div class="card-stars">★★★★★</div>
-              <div class="card-who">${r.author||''}</div>
-            </div>
-          </div>`;
-        grid.insertBefore(card, grid.firstChild);
-      });
+    try {
+      // 1. טען תוכן הדף (hero, כרטיסים, feature, love)
+      await loadPageData();
+      
+      // 2. טען מתכונים דינמיים
+      srRecipes = await loadSRRecipes();
+      if(srRecipes.length){
+        const grid = document.querySelector('.home-grid');
+        if(grid){
+          srRecipes.forEach((r,i)=>{
+            const card = document.createElement('div');
+            card.className='card'; card.dataset.dynIdx=i;
+            card.innerHTML=`
+              <div class="card-img">
+                <button class="card-edit-btn" onclick="event.stopPropagation();openEditDynamic(${i})" title="ערכי מתכון">✏️</button>
+                <button class="card-delete-btn" onclick="event.stopPropagation();deleteDynamic(${i})" title="מחקי מתכון">🗑️</button>
+                <img src="${r.thumb||r.image||''}" onerror="this.style.display='none'" />
+                <div class="card-accent"></div>
+              </div>
+              <div class="card-body">
+                <div class="card-cat">${r.category||''}</div>
+                <div class="card-title">${r.name||''}</div>
+                <div class="card-meta">
+                  <div class="card-stars">★★★★★</div>
+                  <div class="card-who">${r.author||''}</div>
+                </div>
+              </div>`;
+            grid.insertBefore(card, grid.firstChild);
+          });
+        }
+      }
+      
+      // 3. טען הגדרות תצוגה (אילו כרטיסים להציג)
+      await loadHomeSlots();
+      
+      // 4. טען דירוגים וסימוני "ניסינו"
+      initStarRatings();
+      await loadRatings();
+      await loadTried();
+      
+      console.log('✅ כל הנתונים נטענו בהצלחה');
+    } catch(e) {
+      console.error('❌ שגיאה בטעינת נתונים:', e);
     }
-    // Load ratings and tried
-    initStarRatings(); loadRatings(); loadTried();
-  }, 500);
+  }, 400);
   setTimeout(autoBackup, 8000);
 });
 
@@ -1943,17 +1959,27 @@ async function savePageData() {
 
 async function loadPageData() {
   let data = null;
+  let source = 'none';
+  
+  // נסה Supabase
   const sb = await initSupabase();
   if(sb) {
     try {
       const {data:row, error} = await sb.from('recipes').select('data').eq('id','page_content').single();
-      if(!error && row?.data) data = JSON.parse(row.data);
+      if(!error && row?.data){ data = JSON.parse(row.data); source = 'supabase'; }
+    } catch(e) { console.warn('Supabase load failed:', e); }
+  }
+  
+  // fallback ל-localStorage
+  if(!data) {
+    try {
+      const local = localStorage.getItem('sr_page_data');
+      if(local){ data = JSON.parse(local); source = 'localStorage'; }
     } catch(e) {}
   }
-  if(!data) {
-    try { const local = localStorage.getItem('sr_page_data'); if(local) data = JSON.parse(local); } catch(e) {}
-  }
-  if(!data) return;
+  
+  if(!data) { console.log('ℹ️ אין נתונים שמורים — משתמש בברירות מחדל'); return; }
+  console.log(`📂 נתונים נטענו מ-${source} (${data.cards?.length || 0} כרטיסים)`);
 
   // שחזר hero
   if(data.hero) {
@@ -1972,19 +1998,19 @@ async function loadPageData() {
   if(data.cards) {
     data.cards.forEach((c, i) => {
       const n = i + 1;
+      const cardEl = document.getElementById(`card${n}`);
+      if(!cardEl) return;
+      
       const img = document.getElementById(`card${n}Img`);
-      if(img && c.img){ img.src = c.img; img.style.display = 'block'; }
+      if(img && c.img && c.img !== '' && !c.img.endsWith('undefined')){
+        img.src = c.img; img.style.display = 'block';
+      }
       const cat = document.getElementById(`card${n}Cat`);
       if(cat && c.cat) cat.textContent = c.cat;
       const title = document.getElementById(`card${n}Title`);
       if(title && c.title) title.textContent = c.title;
       const who = document.getElementById(`card${n}Who`);
       if(who && c.who) who.textContent = c.who;
-      // הצג כרטיסים שיש להם תוכן (תמונה או שם)
-      const cardEl = document.getElementById(`card${n}`);
-      if(cardEl && (c.img || (c.title && !c.title.match(/^מתכון \d$/)))){
-        cardEl.style.display = '';
-      }
     });
   }
 
@@ -2054,7 +2080,7 @@ async function setCardTried(n, val){
 }
 
 // ── כל המתכונים ──
-let homeSlots = [1,2,3,4,5,6,7,8,9]; // ברירת מחדל
+let homeSlots = [1,2,3,4,5,6]; // ברירת מחדל — רק כרטיסים עם תוכן
 
 async function loadHomeSlots(){
   try{
@@ -2074,7 +2100,9 @@ async function saveHomeSlots(){
   const json=JSON.stringify(homeSlots);
   try{localStorage.setItem('sr_home_slots',json);}catch(e){}
   const sb=await initSupabase();
-  if(sb) sb.from('recipes').upsert({id:'sr_home_slots',data:json,updated_at:new Date().toISOString()},{onConflict:'id'});
+  if(sb){
+    try{ await sb.from('recipes').upsert({id:'sr_home_slots',data:json,updated_at:new Date().toISOString()},{onConflict:'id'}); }catch(e){}
+  }
 }
 
 function applyHomeSlots(){
@@ -2348,12 +2376,13 @@ async function saveEditRecipe(){
         imgEl.style.display = 'block';
       }
     }
-    // Make card visible
-    document.getElementById(`card${n}`).style.display = '';
+    // Make card visible + add to homeSlots
+    document.getElementById(`card${n}`).style.display = 'flex';
+    if(!homeSlots.includes(n)){ homeSlots.push(n); homeSlots.sort((a,b)=>a-b); await saveHomeSlots(); }
     
     markChanged();
     await savePageData();
-    toast(`✅ כרטיס ${n} עודכן!`);
+    toast(`✅ כרטיס ${n} עודכן ונשמר!`);
     
   } else {
     // Update dynamic recipe
