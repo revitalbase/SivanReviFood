@@ -1986,21 +1986,31 @@ function renderNewCard(r){
 let srRatings = {};
 
 async function loadRatings(){
-  // קודם נסה localStorage (מהיר)
+  // טען מ-localStorage
   try{
     const local = localStorage.getItem('sr_ratings');
     if(local){ srRatings = JSON.parse(local); renderRatings(); }
   }catch(e){}
 
-  // אחר כך Supabase (מדויק יותר)
+  // טען מ-Supabase — מזג (לוקח את המקסימום)
   try{
     const sb = await initSupabase();
     if(sb){
       const {data,error} = await sb.from('recipes').select('data').eq('id','sr_ratings').single();
       if(!error && data?.data){
-        srRatings = JSON.parse(data.data);
-        // עדכן גם localStorage
-        try{ localStorage.setItem('sr_ratings', data.data); }catch(e){}
+        const cloud = JSON.parse(data.data);
+        // מזג: לכל כרטיס, שמור את הדירוג עם יותר הצבעות
+        let merged = {...srRatings};
+        for(const key in cloud){
+          if(!merged[key] || (cloud[key].count||0) > (merged[key].count||0)){
+            merged[key] = cloud[key];
+          }
+        }
+        srRatings = merged;
+        const json = JSON.stringify(srRatings);
+        try{ localStorage.setItem('sr_ratings', json); }catch(e){}
+        // עדכן גם Supabase עם המיזוג
+        try{ await sb.from('recipes').upsert({id:'sr_ratings',data:json,updated_at:new Date().toISOString()},{onConflict:'id'}); }catch(e){}
         renderRatings();
       }
     }
@@ -2327,14 +2337,26 @@ async function loadPageData() {
 let srTried = {};
 
 async function loadTried(){
+  // localStorage קודם
+  try{
+    const local = localStorage.getItem('sr_tried');
+    if(local) srTried = JSON.parse(local);
+  }catch(e){}
+  
+  // Supabase — מזג
   try{
     const sb = await initSupabase();
     if(sb){
       const {data} = await sb.from('recipes').select('data').eq('id','sr_tried').single();
-      if(data?.data) srTried = JSON.parse(data.data);
-    } else {
-      const local = localStorage.getItem('sr_tried');
-      if(local) srTried = JSON.parse(local);
+      if(data?.data){
+        const cloud = JSON.parse(data.data);
+        // מזג: אם ב-cloud יש ערך שלא קיים ב-local, תוסיף
+        for(const key in cloud){
+          if(srTried[key] === undefined) srTried[key] = cloud[key];
+        }
+        const json = JSON.stringify(srTried);
+        try{ localStorage.setItem('sr_tried', json); }catch(e){}
+      }
     }
   }catch(e){}
   renderTried();
@@ -2343,8 +2365,10 @@ async function loadTried(){
 async function saveTried(){
   const json = JSON.stringify(srTried);
   try{ localStorage.setItem('sr_tried', json); }catch(e){}
-  const sb = await initSupabase();
-  if(sb) sb.from('recipes').upsert({id:'sr_tried',data:json,updated_at:new Date().toISOString()},{onConflict:'id'});
+  try{
+    const sb = await initSupabase();
+    if(sb) await sb.from('recipes').upsert({id:'sr_tried',data:json,updated_at:new Date().toISOString()},{onConflict:'id'});
+  }catch(e){}
 }
 
 function renderTried(){
