@@ -1279,18 +1279,68 @@ body { font-family: 'Heebo', sans-serif; background: var(--cream); color: var(--
 </div>
 
 <div id="debugBar">
-  <span id="dbLocal">⏳ localStorage</span>
-  <span id="dbSupabase">⏳ Supabase</span>
-  <span id="dbData">⏳ Data</span>
+  <span id="dbLocal">⏳ local</span>
+  <span id="dbSupabase">⏳ sb</span>
+  <span id="dbData">⏳</span>
   <span id="dbSave">—</span>
-  <button onclick="testSaveLoad()" style="background:var(--gold);border:none;color:#fff;padding:3px 8px;border-radius:4px;font-size:10px;cursor:pointer">🧪 בדוק שמירה</button>
+  <button onclick="testSaveLoad()" style="background:var(--gold);border:none;color:#fff;padding:3px 8px;border-radius:4px;font-size:10px;cursor:pointer">🧪 בדיקה</button>
+  <button onclick="clearCorruptData()" style="background:#e74c3c;border:none;color:#fff;padding:3px 8px;border-radius:4px;font-size:10px;cursor:pointer">🗑️ נקה local</button>
+  <button onclick="forceSupabaseLoad()" style="background:#3498db;border:none;color:#fff;padding:3px 8px;border-radius:4px;font-size:10px;cursor:pointer">☁️ טען מ-Supabase</button>
   <button onclick="this.parentElement.remove()" style="background:none;border:none;color:#666;cursor:pointer;font-size:10px">✕</button>
 </div>
 <script>
 // ── סיסמת עריכה ──
 const EDIT_PASSWORD = '0211';
 
+// ── ניקוי מידע פגום ──
+function clearCorruptData(){
+  if(!confirm('למחוק את כל המידע המקומי הפגום?\nהדף יטען מחדש מ-Supabase.')) return;
+  try {
+    localStorage.removeItem('sr_page_data');
+    localStorage.removeItem('sr_auto_backup');
+    localStorage.removeItem('sr_recipes');
+    localStorage.removeItem('sr_ratings');
+    localStorage.removeItem('sr_tried');
+    localStorage.removeItem('sr_home_slots');
+    localStorage.removeItem('sr_gallery');
+  } catch(e){}
+  toast('🗑️ מידע מקומי נמחק — טוען מחדש...');
+  setTimeout(() => location.reload(), 1000);
+}
+
+// ── טעינת כפייה מ-Supabase ──
+async function forceSupabaseLoad(){
+  toast('☁️ טוען מ-Supabase...');
+  try {
+    const sb = await initSupabase();
+    if(!sb){ toast('❌ Supabase לא מחובר'); return; }
+    
+    const {data:row, error} = await sb.from('recipes').select('data').eq('id','page_content').single();
+    if(error){ toast('❌ ' + error.message); return; }
+    if(!row?.data){ toast('⚠️ אין מידע ב-Supabase'); return; }
+    
+    const parsed = JSON.parse(row.data);
+    const hasImages = parsed.cards?.some(c => c.img && c.img.length > 100);
+    
+    if(!hasImages) {
+      toast('⚠️ גם ב-Supabase המידע ריק! צריך לערוך ידנית');
+      // Enable saving anyway so user can fix
+      dataFullyLoaded = true;
+      return;
+    }
+    
+    // שמור ל-localStorage
+    localStorage.setItem('sr_page_data', row.data);
+    toast('✅ נטען מ-Supabase ונשמר! טוען מחדש...');
+    setTimeout(() => location.reload(), 1000);
+  } catch(e) {
+    toast('❌ שגיאה: ' + e.message);
+  }
+}
+
 // ── בדיקת שמירה/טעינה ──
+let dataFullyLoaded = false; // מונע שמירת מידע ריק!
+
 async function testSaveLoad(){
   const ts = Date.now().toString();
   let results = [];
@@ -1308,9 +1358,10 @@ async function testSaveLoad(){
     const pd = localStorage.getItem('sr_page_data');
     if(pd) {
       const parsed = JSON.parse(pd);
-      results.push(`✅ page_data קיים (${(pd.length/1024).toFixed(0)}KB, ${parsed.cards?.length||0} כרטיסים)`);
+      const hasImages = parsed.cards?.some(c => c.img && c.img.length > 100);
+      results.push(`✅ page_data: ${(pd.length/1024).toFixed(0)}KB, ${parsed.cards?.length||0} כרטיסים, תמונות: ${hasImages?'כן':'לא'}`);
     } else {
-      results.push('⚠️ page_data ריק ב-localStorage');
+      results.push('⚠️ page_data ריק');
     }
   } catch(e) { results.push('❌ page_data שגוי: ' + e.message); }
   
@@ -1318,19 +1369,20 @@ async function testSaveLoad(){
   try {
     const sb = await initSupabase();
     if(sb) {
-      const {data,error} = await sb.from('recipes').select('id').limit(5);
-      if(error) results.push('❌ Supabase query error: ' + error.message);
-      else results.push(`✅ Supabase: ${data?.length||0} שורות`);
+      const {data,error} = await sb.from('recipes').select('id,data').eq('id','page_content').single();
+      if(error) results.push('❌ Supabase page_content: ' + error.message);
+      else {
+        const pd = JSON.parse(data.data);
+        const hasImages = pd.cards?.some(c => c.img && c.img.length > 100);
+        results.push(`✅ Supabase page_content: ${(data.data.length/1024).toFixed(0)}KB, תמונות: ${hasImages?'כן':'לא'}`);
+      }
     } else {
       results.push('⚠️ Supabase לא מחובר');
     }
   } catch(e) { results.push('❌ Supabase: ' + e.message); }
   
-  // Test save + reload
-  try {
-    await savePageData();
-    results.push('✅ savePageData הושלם');
-  } catch(e) { results.push('❌ savePageData: ' + e.message); }
+  results.push('');
+  results.push('dataFullyLoaded = ' + dataFullyLoaded);
   
   alert(results.join('\n'));
 }
@@ -1516,6 +1568,7 @@ function toggleEdit() {
 
 function markChanged() {
   hasChanges = true;
+  dataFullyLoaded = true; // עריכה ידנית — מאשר שמירה
   if (editMode) document.getElementById('epSaveBar').classList.add('open');
 }
 
@@ -1585,6 +1638,7 @@ function applyCard(n) {
   document.getElementById(`card${n}Cat`).textContent = document.getElementById(`in-card${n}Cat`).value;
   document.getElementById(`card${n}Title`).textContent = document.getElementById(`in-card${n}Title`).value;
   document.getElementById(`card${n}Who`).textContent = document.getElementById(`in-card${n}Who`).value;
+  dataFullyLoaded = true; // עריכה ידנית
   markChanged();
   savePageData();
   toast(`✅ כרטיס ${n} עודכן ונשמר!`);
@@ -1984,6 +2038,7 @@ async function restoreBackup(e){
 
 // גיבוי אוטומטי כל 24 שעות
 async function autoBackup(){
+  if(!dataFullyLoaded) return; // מנע גיבוי מידע ריק
   if(!srRecipes || !srRecipes.length) return;
   const lastKey = 'sr_last_backup';
   const now = Date.now();
@@ -2034,17 +2089,33 @@ function collectPageData() {
 }
 
 async function savePageData() {
+  // === מניעת שמירת מידע ריק ===
+  if(!dataFullyLoaded) {
+    console.warn('⛔ savePageData נחסם — המידע לא נטען במלואו');
+    const dbSv = document.getElementById('dbSave');
+    if(dbSv) dbSv.innerHTML = '<span class="warn">⛔ שמירה נחסמה (לא נטען)</span>';
+    return;
+  }
+  
   const data = collectPageData();
+  
+  // בדוק שלפחות כרטיס אחד יש לו תמונה אמיתית
+  const hasAnyImage = data.cards?.some(c => c.img && c.img.length > 100);
+  if(!hasAnyImage) {
+    console.warn('⛔ savePageData נחסם — אין תמונות (מידע ריק)');
+    const dbSv = document.getElementById('dbSave');
+    if(dbSv) dbSv.innerHTML = '<span class="err">⛔ נחסם: מידע ריק!</span>';
+    return;
+  }
+  
   const json = JSON.stringify(data);
   let savedLocal = false, savedCloud = false;
   
-  // שמור ל-localStorage מיד
   try {
     localStorage.setItem('sr_page_data', json);
     savedLocal = true;
   } catch(e) { console.error('localStorage save FAILED:', e.name); }
   
-  // גיבוי
   try {
     localStorage.setItem('sr_auto_backup', JSON.stringify({
       pageContent: data, recipes: srRecipes, ratings: srRatings,
@@ -2052,7 +2123,6 @@ async function savePageData() {
     }));
   } catch(e) {}
   
-  // שמור ל-Supabase
   const sb = await initSupabase();
   if(sb) {
     try {
@@ -2065,14 +2135,13 @@ async function savePageData() {
   
   const dbSv = document.getElementById('dbSave');
   if(savedLocal && savedCloud) {
-    if(dbSv) dbSv.innerHTML = '<span class="ok">💾 נשמר local+cloud</span>';
+    if(dbSv) dbSv.innerHTML = '<span class="ok">💾 נשמר local+cloud (' + (json.length/1024).toFixed(0) + 'KB)</span>';
   } else if(savedLocal) {
-    if(dbSv) dbSv.innerHTML = '<span class="warn">💾 נשמר local בלבד</span>';
+    if(dbSv) dbSv.innerHTML = '<span class="warn">💾 local בלבד (' + (json.length/1024).toFixed(0) + 'KB)</span>';
   } else {
     if(dbSv) dbSv.innerHTML = '<span class="err">❌ שמירה נכשלה!</span>';
-    toast('❌ שמירה נכשלה!');
   }
-  console.log(`💾 Save: local=${savedLocal}, cloud=${savedCloud}`);
+  console.log(`💾 Save: local=${savedLocal}, cloud=${savedCloud}, size=${(json.length/1024).toFixed(0)}KB`);
 }
 
 async function loadPageData() {
@@ -2152,6 +2221,15 @@ async function loadPageData() {
       const el = document.getElementById(id);
       if(el && data.love[i]) el.textContent = data.love[i];
     });
+  }
+  
+  // סמן שהמידע נטען בהצלחה עם תוכן אמיתי
+  const hasRealImages = data.cards?.some(c => c.img && c.img.length > 100);
+  if(hasRealImages) {
+    dataFullyLoaded = true;
+    console.log('✅ dataFullyLoaded = true (יש תמונות)');
+  } else {
+    console.warn('⚠️ המידע נטען אבל ללא תמונות — שמירה חסומה');
   }
 }
 
@@ -2503,6 +2581,8 @@ async function saveEditRecipe(){
     document.getElementById(`card${n}`).style.display = 'flex';
     if(!homeSlots.includes(n)){ homeSlots.push(n); homeSlots.sort((a,b)=>a-b); await saveHomeSlots(); }
     
+    // המשתמש ערך ידנית — אפשר שמירה
+    dataFullyLoaded = true;
     markChanged();
     await savePageData();
     toast(`✅ כרטיס ${n} עודכן ונשמר!`);
