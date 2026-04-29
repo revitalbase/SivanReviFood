@@ -218,6 +218,27 @@ body { font-family: 'Heebo', sans-serif; background: var(--cream); color: var(--
 .footer-logo span { color: var(--gold); font-style: italic; }
 .footer-heart { font-size: 12px; color: var(--gold); }
 
+/* Debug status bar */
+#debugBar {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: #1a1a1a;
+  color: #aaa;
+  font-family: monospace;
+  font-size: 11px;
+  padding: 6px 12px;
+  z-index: 9999;
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  border-top: 1px solid #333;
+}
+#debugBar .ok { color: #4caf50; }
+#debugBar .err { color: #f44336; }
+#debugBar .warn { color: #ff9800; }
+
 /* GALLERY CAROUSEL */
 
 /* CARD EDIT BUTTON */
@@ -1257,9 +1278,62 @@ body { font-family: 'Heebo', sans-serif; background: var(--cream); color: var(--
   <button class="ep-export" onclick="exportHTML()">💾 הורידי קובץ מעודכן</button>
 </div>
 
+<div id="debugBar">
+  <span id="dbLocal">⏳ localStorage</span>
+  <span id="dbSupabase">⏳ Supabase</span>
+  <span id="dbData">⏳ Data</span>
+  <span id="dbSave">—</span>
+  <button onclick="testSaveLoad()" style="background:var(--gold);border:none;color:#fff;padding:3px 8px;border-radius:4px;font-size:10px;cursor:pointer">🧪 בדוק שמירה</button>
+  <button onclick="this.parentElement.remove()" style="background:none;border:none;color:#666;cursor:pointer;font-size:10px">✕</button>
+</div>
 <script>
 // ── סיסמת עריכה ──
 const EDIT_PASSWORD = '0211';
+
+// ── בדיקת שמירה/טעינה ──
+async function testSaveLoad(){
+  const ts = Date.now().toString();
+  let results = [];
+  
+  // Test localStorage
+  try {
+    localStorage.setItem('_sr_save_test', ts);
+    const v = localStorage.getItem('_sr_save_test');
+    results.push(v === ts ? '✅ localStorage עובד' : '❌ localStorage שבור');
+    localStorage.removeItem('_sr_save_test');
+  } catch(e) { results.push('❌ localStorage חסום: ' + e.name); }
+  
+  // Test existing save data
+  try {
+    const pd = localStorage.getItem('sr_page_data');
+    if(pd) {
+      const parsed = JSON.parse(pd);
+      results.push(`✅ page_data קיים (${(pd.length/1024).toFixed(0)}KB, ${parsed.cards?.length||0} כרטיסים)`);
+    } else {
+      results.push('⚠️ page_data ריק ב-localStorage');
+    }
+  } catch(e) { results.push('❌ page_data שגוי: ' + e.message); }
+  
+  // Test Supabase
+  try {
+    const sb = await initSupabase();
+    if(sb) {
+      const {data,error} = await sb.from('recipes').select('id').limit(5);
+      if(error) results.push('❌ Supabase query error: ' + error.message);
+      else results.push(`✅ Supabase: ${data?.length||0} שורות`);
+    } else {
+      results.push('⚠️ Supabase לא מחובר');
+    }
+  } catch(e) { results.push('❌ Supabase: ' + e.message); }
+  
+  // Test save + reload
+  try {
+    await savePageData();
+    results.push('✅ savePageData הושלם');
+  } catch(e) { results.push('❌ savePageData: ' + e.message); }
+  
+  alert(results.join('\n'));
+}
 
 function checkEditAccess() {
   // תמיד הצג את הכפתור הקטן
@@ -1296,12 +1370,15 @@ window.addEventListener('DOMContentLoaded', () => {
   checkEditAccess();
   
   // === דיאגנוסטיקה — בדיקת localStorage ===
+  const dbL = document.getElementById('dbLocal');
   try {
     localStorage.setItem('_sr_test', 'ok');
     const v = localStorage.getItem('_sr_test');
     localStorage.removeItem('_sr_test');
-    console.log('localStorage:', v === 'ok' ? '✅' : '❌');
-  } catch(e) { console.error('localStorage BLOCKED:', e); }
+    if(dbL) dbL.innerHTML = v === 'ok' ? '<span class="ok">✅ localStorage</span>' : '<span class="err">❌ localStorage</span>';
+  } catch(e) {
+    if(dbL) dbL.innerHTML = '<span class="err">❌ localStorage חסום: '+e.name+'</span>';
+  }
   
   setTimeout(async () => {
     try {
@@ -1555,13 +1632,19 @@ function applyLove() {
 let _sb = null;
 async function initSupabase(){
   if(_sb) return _sb;
+  const dbS = document.getElementById('dbSupabase');
   try{
     const res = await fetch('/api/config');
     const cfg = await res.json();
     if(cfg.supabaseUrl && cfg.supabaseKey){
       _sb = supabase.createClient(cfg.supabaseUrl, cfg.supabaseKey, {auth:{persistSession:false}});
+      if(dbS) dbS.innerHTML = '<span class="ok">✅ Supabase</span>';
+    } else {
+      if(dbS) dbS.innerHTML = '<span class="warn">⚠️ Supabase config ריק</span>';
     }
-  }catch(e){}
+  }catch(e){
+    if(dbS) dbS.innerHTML = '<span class="err">❌ Supabase: '+e.message.substring(0,30)+'</span>';
+  }
   return _sb;
 }
 
@@ -1980,6 +2063,15 @@ async function savePageData() {
     } catch(e) { console.error('Supabase save exception:', e); }
   }
   
+  const dbSv = document.getElementById('dbSave');
+  if(savedLocal && savedCloud) {
+    if(dbSv) dbSv.innerHTML = '<span class="ok">💾 נשמר local+cloud</span>';
+  } else if(savedLocal) {
+    if(dbSv) dbSv.innerHTML = '<span class="warn">💾 נשמר local בלבד</span>';
+  } else {
+    if(dbSv) dbSv.innerHTML = '<span class="err">❌ שמירה נכשלה!</span>';
+    toast('❌ שמירה נכשלה!');
+  }
   console.log(`💾 Save: local=${savedLocal}, cloud=${savedCloud}`);
 }
 
@@ -2007,7 +2099,13 @@ async function loadPageData() {
     }
   } catch(e) { console.warn('Supabase load error:', e); }
   
-  if(!data) { console.log('ℹ️ אין נתונים שמורים'); return; }
+  if(!data) {
+    const dbD = document.getElementById('dbData');
+    if(dbD) dbD.innerHTML = '<span class="warn">⚠️ אין נתונים שמורים</span>';
+    console.log('ℹ️ אין נתונים שמורים'); return;
+  }
+  const dbD = document.getElementById('dbData');
+  if(dbD) dbD.innerHTML = `<span class="ok">✅ נטען מ-${source} (${data.cards?.length||0} כרטיסים)</span>`;
   console.log(`📂 נטען מ-${source} (${data.cards?.length||0} כרטיסים)`);
 
   // שחזר hero
