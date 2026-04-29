@@ -242,50 +242,92 @@ body { font-family: 'Heebo', sans-serif; background: var(--cream); color: var(--
 /* GALLERY CAROUSEL */
 
 /* CARD EDIT BUTTON */
+
+/* RECIPE DETAIL VIEW */
+.recipe-detail-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,.72);
+  backdrop-filter: blur(7px);
+  z-index: 4200;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+}
+.recipe-detail-overlay.open { display: flex; }
+.recipe-detail-modal {
+  background: #fff;
+  border-radius: 18px;
+  width: 100%;
+  max-width: 600px;
+  max-height: 92vh;
+  overflow-y: auto;
+  box-shadow: 0 28px 80px rgba(0,0,0,.4);
+}
+.rd-hero { width: 100%; height: 220px; background: #f5f3f0; border-radius: 18px 18px 0 0; overflow: hidden; position: relative; }
+.rd-hero img { width: 100%; height: 100%; object-fit: cover; }
+.rd-hero .empty { display:flex;align-items:center;justify-content:center;height:100%;font-size:48px;color:#ddd; }
+.rd-close { position: absolute; top: 12px; left: 12px; background: rgba(0,0,0,.5); color: #fff; border: none; width: 36px; height: 36px; border-radius: 50%; font-size: 16px; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+.rd-close:hover { background: var(--gold); }
+.rd-edit-btn { position: absolute; top: 12px; right: 12px; background: var(--gold); color: #fff; border: none; padding: 6px 14px; border-radius: 20px; font-size: 12px; cursor: pointer; font-family: 'Heebo', sans-serif; }
+.rd-body { padding: 24px; }
+.rd-cat { font-size: 10px; letter-spacing: 2px; color: var(--gold); text-transform: uppercase; margin-bottom: 6px; }
+.rd-title { font-family: 'Playfair Display', serif; font-size: 24px; margin-bottom: 8px; }
+.rd-meta { display: flex; gap: 16px; font-size: 12px; color: #999; margin-bottom: 20px; flex-wrap: wrap; }
+.rd-section { margin-bottom: 20px; }
+.rd-section h3 { font-size: 14px; color: var(--gold); margin-bottom: 8px; font-family: 'Heebo', sans-serif; }
+.rd-section p, .rd-section div { font-size: 13px; line-height: 1.8; color: #555; white-space: pre-line; }
+.rd-photos { display: flex; flex-wrap: wrap; gap: 8px; }
+.rd-photos img { width: 100px; height: 100px; object-fit: cover; border-radius: 8px; cursor: pointer; transition: .2s; }
+.rd-photos img:hover { transform: scale(1.05); box-shadow: 0 4px 12px rgba(0,0,0,.2); }
+.rd-link { display: inline-flex; align-items: center; gap: 6px; color: var(--gold); text-decoration: none; font-size: 13px; border: 1px solid var(--gold); padding: 8px 16px; border-radius: 20px; transition: .2s; }
+.rd-link:hover { background: var(--gold); color: #fff; }
+
 .card-edit-btn {
   position: absolute;
   top: 8px;
   left: 8px;
-  width: 30px;
-  height: 30px;
-  background: rgba(0,0,0,.55);
+  width: 32px;
+  height: 32px;
+  background: rgba(255,255,255,.85);
   backdrop-filter: blur(4px);
   border: none;
   border-radius: 50%;
-  color: #fff;
-  font-size: 13px;
+  color: var(--dark);
+  font-size: 14px;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
-  opacity: 0;
+  opacity: 1;
   transition: .2s;
   z-index: 5;
+  box-shadow: 0 2px 8px rgba(0,0,0,.15);
 }
-.card:hover .card-edit-btn { opacity: 1; }
-.card-edit-btn:hover { background: var(--gold); transform: scale(1.1); }
+.card-edit-btn:hover { background: var(--gold); color: #fff; transform: scale(1.1); }
 .card-delete-btn {
   position: absolute;
   top: 8px;
   right: 8px;
-  width: 30px;
-  height: 30px;
-  background: rgba(180,50,50,.7);
+  width: 32px;
+  height: 32px;
+  background: rgba(255,255,255,.85);
   backdrop-filter: blur(4px);
   border: none;
   border-radius: 50%;
-  color: #fff;
-  font-size: 13px;
+  color: #c0392b;
+  font-size: 14px;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
-  opacity: 0;
+  opacity: 1;
   transition: .2s;
   z-index: 5;
+  box-shadow: 0 2px 8px rgba(0,0,0,.15);
 }
-.card:hover .card-delete-btn { opacity: 1; }
-.card-delete-btn:hover { background: #c0392b; transform: scale(1.1); }
+.card-delete-btn:hover { background: #c0392b; color: #fff; transform: scale(1.1); }
 
 /* EDIT RECIPE MODAL */
 .edit-recipe-overlay {
@@ -621,7 +663,7 @@ body { font-family: 'Heebo', sans-serif; background: var(--cream); color: var(--
     <a class="section-link" href="#" onclick="event.preventDefault();openAllRecipes()">כל המתכונים ←</a>
   </div>
   <div class="home-grid" id="homeGrid">
-    <div class="card" id="card1">
+    <div class="card" id="card1" onclick="openRecipeDetail('fixed',1)" style="cursor:pointer">
       <div class="card-img">
         <button class="card-edit-btn" onclick="event.stopPropagation();openEditCard(1)" title="ערכי מתכון">✏️</button>
         <img id="card1Img" src="https://res.cloudinary.com/dt3n4di9i/image/upload/v1774972052/IMG_9063_zgziqt.jpg" onerror="this.style.display='none'" />
@@ -645,7 +687,7 @@ body { font-family: 'Heebo', sans-serif; background: var(--cream); color: var(--
         </div>
       </div>
     </div>
-    <div class="card" id="card2">
+    <div class="card" id="card2" onclick="openRecipeDetail('fixed',2)" style="cursor:pointer">
       <div class="card-img">
         <button class="card-edit-btn" onclick="event.stopPropagation();openEditCard(2)" title="ערכי מתכון">✏️</button>
         <img id="card2Img" src="https://res.cloudinary.com/dt3n4di9i/image/upload/v1774972098/IMG_5018_zsdhts.jpg" onerror="this.style.display='none'" />
@@ -669,7 +711,7 @@ body { font-family: 'Heebo', sans-serif; background: var(--cream); color: var(--
         </div>
       </div>
     </div>
-    <div class="card" id="card3">
+    <div class="card" id="card3" onclick="openRecipeDetail('fixed',3)" style="cursor:pointer">
       <div class="card-img">
         <button class="card-edit-btn" onclick="event.stopPropagation();openEditCard(3)" title="ערכי מתכון">✏️</button>
         <img id="card3Img" src="https://res.cloudinary.com/dt3n4di9i/image/upload/v1774972079/IMG_9255_bxid0b.jpg" onerror="this.style.display='none'" />
@@ -693,7 +735,7 @@ body { font-family: 'Heebo', sans-serif; background: var(--cream); color: var(--
         </div>
       </div>
     </div>
-    <div class="card" id="card4">
+    <div class="card" id="card4" onclick="openRecipeDetail('fixed',4)" style="cursor:pointer">
       <div class="card-img">
         <button class="card-edit-btn" onclick="event.stopPropagation();openEditCard(4)" title="ערכי מתכון">✏️</button>
         <img id="card4Img" src="https://res.cloudinary.com/dt3n4di9i/image/upload/v1774972069/IMG_3723_rqymqf.jpg" onerror="this.style.display='none'" />
@@ -717,7 +759,7 @@ body { font-family: 'Heebo', sans-serif; background: var(--cream); color: var(--
         </div>
       </div>
     </div>
-    <div class="card" id="card5">
+    <div class="card" id="card5" onclick="openRecipeDetail('fixed',5)" style="cursor:pointer">
       <div class="card-img">
         <button class="card-edit-btn" onclick="event.stopPropagation();openEditCard(5)" title="ערכי מתכון">✏️</button>
         <img id="card5Img" src="https://res.cloudinary.com/dt3n4di9i/image/upload/v1774972125/IMG_8243_irr0j4.jpg" onerror="this.style.display='none'" />
@@ -741,7 +783,7 @@ body { font-family: 'Heebo', sans-serif; background: var(--cream); color: var(--
         </div>
       </div>
     </div>
-    <div class="card" id="card6">
+    <div class="card" id="card6" onclick="openRecipeDetail('fixed',6)" style="cursor:pointer">
       <div class="card-img">
         <button class="card-edit-btn" onclick="event.stopPropagation();openEditCard(6)" title="ערכי מתכון">✏️</button>
         <img id="card6Img" src="https://res.cloudinary.com/dt3n4di9i/image/upload/v1774972052/IMG_9063_zgziqt.jpg" onerror="this.style.display='none'" />
@@ -765,7 +807,7 @@ body { font-family: 'Heebo', sans-serif; background: var(--cream); color: var(--
         </div>
       </div>
     </div>
-    <div class="card" id="card7" style="display:none">
+    <div class="card" id="card7" onclick="openRecipeDetail('fixed',7)" style="cursor:pointer" style="display:none">
       <div class="card-img">
         <button class="card-edit-btn" onclick="event.stopPropagation();openEditCard(7)" title="ערכי מתכון">✏️</button>
         <img id="card7Img" src="" style="display:none" />
@@ -789,7 +831,7 @@ body { font-family: 'Heebo', sans-serif; background: var(--cream); color: var(--
         </div>
       </div>
     </div>
-    <div class="card" id="card8" style="display:none">
+    <div class="card" id="card8" onclick="openRecipeDetail('fixed',8)" style="cursor:pointer" style="display:none">
       <div class="card-img">
         <button class="card-edit-btn" onclick="event.stopPropagation();openEditCard(8)" title="ערכי מתכון">✏️</button>
         <img id="card8Img" src="" style="display:none" />
@@ -813,7 +855,7 @@ body { font-family: 'Heebo', sans-serif; background: var(--cream); color: var(--
         </div>
       </div>
     </div>
-    <div class="card" id="card9" style="display:none">
+    <div class="card" id="card9" onclick="openRecipeDetail('fixed',9)" style="cursor:pointer" style="display:none">
       <div class="card-img">
         <button class="card-edit-btn" onclick="event.stopPropagation();openEditCard(9)" title="ערכי מתכון">✏️</button>
         <img id="card9Img" src="" style="display:none" />
@@ -899,6 +941,41 @@ body { font-family: 'Heebo', sans-serif; background: var(--cream); color: var(--
   </div>
 </div>
 
+<!-- RECIPE DETAIL VIEW -->
+<div class="recipe-detail-overlay" id="recipeDetailOverlay">
+  <div class="recipe-detail-modal">
+    <div class="rd-hero" id="rdHero">
+      <button class="rd-close" onclick="closeRecipeDetail()">✕</button>
+      <button class="rd-edit-btn" id="rdEditBtn" onclick="editFromDetail()">✏️ ערכי</button>
+    </div>
+    <div class="rd-body">
+      <div class="rd-cat" id="rdCat"></div>
+      <div class="rd-title" id="rdTitle"></div>
+      <div class="rd-meta">
+        <span id="rdAuthor"></span>
+        <span id="rdPrepTime"></span>
+        <span id="rdServings"></span>
+      </div>
+      <div class="rd-section" id="rdIngredientsSection" style="display:none">
+        <h3>🥘 מצרכים</h3>
+        <div id="rdIngredients"></div>
+      </div>
+      <div class="rd-section" id="rdStepsSection" style="display:none">
+        <h3>📋 שלבי הכנה</h3>
+        <div id="rdSteps"></div>
+      </div>
+      <div class="rd-section" id="rdUrlSection" style="display:none">
+        <h3>🔗 מתכון מקורי</h3>
+        <a class="rd-link" id="rdUrl" href="#" target="_blank">פתחי את המתכון המקורי →</a>
+      </div>
+      <div class="rd-section" id="rdPhotosSection" style="display:none">
+        <h3>📸 ניסינו את זה!</h3>
+        <div class="rd-photos" id="rdPhotos"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
 <!-- EDIT RECIPE MODAL -->
 <div class="edit-recipe-overlay" id="editRecipeOverlay">
   <div class="edit-recipe-modal">
@@ -952,6 +1029,13 @@ body { font-family: 'Heebo', sans-serif; background: var(--cream); color: var(--
         <div style="display:flex;gap:10px">
           <div style="flex:1"><label class="fl">⏱️ זמן הכנה</label><input class="fi" id="erPrepTime" placeholder="30 דקות" /></div>
           <div style="flex:1"><label class="fl">🍽️ מנות</label><input class="fi" id="erServings" placeholder="4 מנות" /></div>
+        </div>
+      </div>
+      <div class="fg" id="erPhotosGroup" style="display:none">
+        <label class="fl">📸 תמונות שלנו מהמתכון</label>
+        <div id="erPhotosPreview" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px"></div>
+        <div style="display:flex;gap:8px">
+          <input type="file" id="erPhotoFileIn" accept="image/*" style="font-size:12px;flex:1" onchange="addERPhoto(event)" multiple />
         </div>
       </div>
       <button class="btn-save-modal" onclick="saveEditRecipe()">✅ שמרי שינויים</button>
@@ -1278,7 +1362,7 @@ body { font-family: 'Heebo', sans-serif; background: var(--cream); color: var(--
   <button class="ep-export" onclick="exportHTML()">💾 הורידי קובץ מעודכן</button>
 </div>
 
-<div id="debugBar">
+<div id="debugBar" style="display:none">
   <span id="dbLocal">⏳ local</span>
   <span id="dbSupabase">⏳ sb</span>
   <span id="dbData">⏳</span>
@@ -1421,6 +1505,9 @@ function handleEditClick() {
 window.addEventListener('DOMContentLoaded', () => {
   checkEditAccess();
   
+  // הצג בר דיבאג רק עם ?debug ב-URL
+  if(location.search.includes('debug')) document.getElementById('debugBar').style.display = 'flex';
+  
   // === דיאגנוסטיקה — בדיקת localStorage ===
   const dbL = document.getElementById('dbLocal');
   try {
@@ -1474,12 +1561,35 @@ window.addEventListener('DOMContentLoaded', () => {
       await loadTried();
       
       console.log('✅ כל הנתונים נטענו');
+      
+      // Load fixed card extras from Supabase
+      try {
+        const sb2 = await initSupabase();
+        if(sb2){
+          for(let n=1;n<=9;n++){
+            try{
+              const {data:ex} = await sb2.from('recipes').select('data').eq('id',`card${n}_extra`).single();
+              if(ex?.data) localStorage.setItem(`card${n}_extra`, ex.data);
+            }catch(e){}
+          }
+        }
+      }catch(e){}
+      
     } catch(e) {
       console.error('❌ שגיאה בטעינת נתונים:', e);
       toast('❌ שגיאה בטעינה: ' + e.message);
     }
   }, 400);
   setTimeout(autoBackup, 8000);
+  
+  // שמירה אוטומטית כל 2 דקות
+  setInterval(async () => {
+    if(dataFullyLoaded && hasChanges){
+      await savePageData();
+      hasChanges = false;
+      console.log('🔄 שמירה אוטומטית');
+    }
+  }, 120000);
 });
 
 let editMode = false;
@@ -2355,12 +2465,16 @@ function renderAllGrid(cards){
   }
   grid.innerHTML = cards.map(c=>{
     const isFixed = c.id.startsWith('c');
+    const cardNum = c.id.slice(1);
+    const clickAction = isFixed
+      ? `openRecipeDetail('fixed',${cardNum})`
+      : `openRecipeDetail('dynamic',${cardNum})`;
     const editBtn = isFixed
-      ? `<button class="card-edit-btn" onclick="event.stopPropagation();openEditCard(${c.id.slice(1)})" title="ערכי">✏️</button>`
-      : `<button class="card-edit-btn" onclick="event.stopPropagation();openEditDynamic(${c.id.slice(1)})" title="ערכי">✏️</button>
-         <button class="card-delete-btn" onclick="event.stopPropagation();deleteDynamic(${c.id.slice(1)})" title="מחקי">🗑️</button>`;
+      ? `<button class="card-edit-btn" onclick="event.stopPropagation();openEditCard(${cardNum})" title="ערכי">✏️</button>`
+      : `<button class="card-edit-btn" onclick="event.stopPropagation();openEditDynamic(${cardNum})" title="ערכי">✏️</button>
+         <button class="card-delete-btn" onclick="event.stopPropagation();deleteDynamic(${cardNum})" title="מחקי">🗑️</button>`;
     return `
-    <div class="card" style="cursor:default">
+    <div class="card" style="cursor:pointer" onclick="${clickAction}">
       <div class="card-img" style="height:160px;position:relative">
         ${editBtn}
         ${c.img && !c.img.endsWith('undefined')
@@ -2427,12 +2541,6 @@ let erSelectedAuthor = '';
 let erFileData = '';
 
 function openEditCard(n){
-  // Check auth
-  if(sessionStorage.getItem('sr_edit_auth') !== '1'){
-    const pw = prompt('🔐 סיסמת עריכה:');
-    if(pw !== EDIT_PASSWORD){ if(pw !== null) toast('❌ סיסמה שגויה'); return; }
-    sessionStorage.setItem('sr_edit_auth', '1');
-  }
   
   erFileData = '';
   document.getElementById('erType').value = 'fixed';
@@ -2458,23 +2566,29 @@ function openEditCard(n){
   // Thumbnail preview
   updateERThumbPreview(img ? img.src : '');
   
-  // Hide dynamic-only fields
-  document.getElementById('erIngredientsGroup').style.display = 'none';
-  document.getElementById('erStepsGroup').style.display = 'none';
-  document.getElementById('erPrepGroup').style.display = 'none';
-  document.getElementById('erUrlGroup').style.display = 'none';
+  // Show all fields
+  document.getElementById('erIngredientsGroup').style.display = 'block';
+  document.getElementById('erStepsGroup').style.display = 'block';
+  document.getElementById('erPrepGroup').style.display = 'block';
+  document.getElementById('erUrlGroup').style.display = 'block';
+  document.getElementById('erPhotosGroup').style.display = 'block';
+  
+  // Load saved extra data for this card
+  const extraKey = `card${n}_extra`;
+  const extra = JSON.parse(localStorage.getItem(extraKey) || '{}');
+  document.getElementById('erIngredients').value = extra.ingredients || '';
+  document.getElementById('erSteps').value = extra.steps || '';
+  document.getElementById('erPrepTime').value = extra.prepTime || '';
+  document.getElementById('erServings').value = extra.servings || '';
+  document.getElementById('erUrl').value = extra.url || '';
+  renderERPhotos(extra.photos || []);
+  erCurrentPhotos = extra.photos || [];
   
   document.getElementById('erFileIn').value = '';
   document.getElementById('editRecipeOverlay').classList.add('open');
 }
 
 function openEditDynamic(idx){
-  // Check auth
-  if(sessionStorage.getItem('sr_edit_auth') !== '1'){
-    const pw = prompt('🔐 סיסמת עריכה:');
-    if(pw !== EDIT_PASSWORD){ if(pw !== null) toast('❌ סיסמה שגויה'); return; }
-    sessionStorage.setItem('sr_edit_auth', '1');
-  }
   
   erFileData = '';
   const r = srRecipes[idx];
@@ -2499,11 +2613,15 @@ function openEditDynamic(idx){
   
   updateERThumbPreview(r.thumb || r.image || '');
   
-  // Show dynamic fields
+  // Show all fields
   document.getElementById('erIngredientsGroup').style.display = 'block';
   document.getElementById('erStepsGroup').style.display = 'block';
   document.getElementById('erPrepGroup').style.display = 'block';
   document.getElementById('erUrlGroup').style.display = 'block';
+  document.getElementById('erPhotosGroup').style.display = 'block';
+  
+  renderERPhotos(r.photos || []);
+  erCurrentPhotos = r.photos || [];
   
   document.getElementById('erFileIn').value = '';
   document.getElementById('editRecipeOverlay').classList.add('open');
@@ -2550,6 +2668,130 @@ function handleERFile(e){
   reader.readAsDataURL(file);
 }
 
+// ── תצוגת מתכון מלא ──
+let currentDetailType = '';
+let currentDetailIdx = 0;
+
+function openRecipeDetail(type, idx){
+  currentDetailType = type;
+  currentDetailIdx = idx;
+  
+  let img='', cat='', title='', author='', ingredients='', steps='', prepTime='', servings='', url='', photos=[];
+  
+  if(type === 'fixed'){
+    const n = idx;
+    img = document.getElementById(`card${n}Img`)?.src || '';
+    cat = document.getElementById(`card${n}Cat`)?.textContent || '';
+    title = document.getElementById(`card${n}Title`)?.textContent || '';
+    author = document.getElementById(`card${n}Who`)?.textContent || '';
+    const extra = JSON.parse(localStorage.getItem(`card${n}_extra`) || '{}');
+    ingredients = extra.ingredients || '';
+    steps = extra.steps || '';
+    prepTime = extra.prepTime || '';
+    servings = extra.servings || '';
+    url = extra.url || '';
+    photos = extra.photos || [];
+  } else {
+    const r = srRecipes[idx];
+    if(!r) return;
+    img = r.thumb || r.image || '';
+    cat = r.category || '';
+    title = r.name || '';
+    author = r.author || '';
+    ingredients = r.ingredients || '';
+    steps = r.steps || '';
+    prepTime = r.prepTime || '';
+    servings = r.servings || '';
+    url = r.url || '';
+    photos = r.photos || [];
+  }
+  
+  // Render
+  const hero = document.getElementById('rdHero');
+  if(img && img.length > 10) hero.innerHTML = `<button class="rd-close" onclick="closeRecipeDetail()">✕</button><button class="rd-edit-btn" onclick="editFromDetail()">✏️ ערכי</button><img src="${img}" />`;
+  else hero.innerHTML = `<button class="rd-close" onclick="closeRecipeDetail()">✕</button><button class="rd-edit-btn" onclick="editFromDetail()">✏️ ערכי</button><div class="empty">🍽️</div>`;
+  
+  document.getElementById('rdCat').textContent = cat;
+  document.getElementById('rdTitle').textContent = title;
+  document.getElementById('rdAuthor').textContent = author ? '👨‍🍳 ' + author : '';
+  document.getElementById('rdPrepTime').textContent = prepTime ? '⏱️ ' + prepTime : '';
+  document.getElementById('rdServings').textContent = servings ? '🍽️ ' + servings : '';
+  
+  const ingS = document.getElementById('rdIngredientsSection');
+  if(ingredients){ ingS.style.display = 'block'; document.getElementById('rdIngredients').textContent = ingredients; }
+  else ingS.style.display = 'none';
+  
+  const stpS = document.getElementById('rdStepsSection');
+  if(steps){ stpS.style.display = 'block'; document.getElementById('rdSteps').textContent = steps; }
+  else stpS.style.display = 'none';
+  
+  const urlS = document.getElementById('rdUrlSection');
+  if(url){ urlS.style.display = 'block'; document.getElementById('rdUrl').href = url; }
+  else urlS.style.display = 'none';
+  
+  const phS = document.getElementById('rdPhotosSection');
+  if(photos.length){
+    phS.style.display = 'block';
+    document.getElementById('rdPhotos').innerHTML = photos.map(p => `<img src="${p}" onclick="openLightbox(-1);document.querySelector('#lbContent').innerHTML='<img src=\\'${p}\\' style=\\'max-width:90vw;max-height:85vh;object-fit:contain;border-radius:8px\\' />';document.getElementById('galleryLightbox').classList.add('open');document.body.style.overflow='hidden'" />`).join('');
+  } else phS.style.display = 'none';
+  
+  document.getElementById('recipeDetailOverlay').classList.add('open');
+}
+
+function closeRecipeDetail(){
+  document.getElementById('recipeDetailOverlay').classList.remove('open');
+}
+
+function editFromDetail(){
+  closeRecipeDetail();
+  if(currentDetailType === 'fixed') openEditCard(currentDetailIdx);
+  else openEditDynamic(currentDetailIdx);
+}
+
+// ── תמונות מתכון ──
+let erCurrentPhotos = [];
+
+function renderERPhotos(photos){
+  const area = document.getElementById('erPhotosPreview');
+  if(!photos.length){ area.innerHTML = '<span style="color:#bbb;font-size:12px">אין תמונות עדיין</span>'; return; }
+  area.innerHTML = photos.map((p,i) => `
+    <div style="position:relative;width:70px;height:70px;border-radius:6px;overflow:hidden">
+      <img src="${p}" style="width:100%;height:100%;object-fit:cover" />
+      <button onclick="removeERPhoto(${i})" style="position:absolute;top:2px;right:2px;background:rgba(0,0,0,.6);color:#fff;border:none;border-radius:50%;width:18px;height:18px;font-size:10px;cursor:pointer;display:flex;align-items:center;justify-content:center">✕</button>
+    </div>
+  `).join('');
+}
+
+function addERPhoto(e){
+  Array.from(e.target.files).forEach(file => {
+    if(!file.type.startsWith('image/')) return;
+    const reader = new FileReader();
+    reader.onload = ev => {
+      // Compress the image
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        const max = 400;
+        let w = img.width, h = img.height;
+        if(w > max || h > max){ const r = Math.min(max/w, max/h); w*=r; h*=r; }
+        canvas.width = w; canvas.height = h;
+        canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+        const dataUrl = canvas.toDataURL('image/jpeg', 0.5);
+        erCurrentPhotos.push(dataUrl);
+        renderERPhotos(erCurrentPhotos);
+      };
+      img.src = ev.target.result;
+    };
+    reader.readAsDataURL(file);
+  });
+  e.target.value = '';
+}
+
+function removeERPhoto(idx){
+  erCurrentPhotos.splice(idx, 1);
+  renderERPhotos(erCurrentPhotos);
+}
+
 async function saveEditRecipe(){
   const type = document.getElementById('erType').value;
   const idx = parseInt(document.getElementById('erIndex').value);
@@ -2561,8 +2803,17 @@ async function saveEditRecipe(){
   
   if(!name){ toast('❗ הזיני שם מתכון'); return; }
   
+  // Collect common fields
+  const extraData = {
+    ingredients: document.getElementById('erIngredients').value.trim(),
+    steps: document.getElementById('erSteps').value.trim(),
+    prepTime: document.getElementById('erPrepTime').value.trim(),
+    servings: document.getElementById('erServings').value.trim(),
+    url: document.getElementById('erUrl').value.trim(),
+    photos: erCurrentPhotos,
+  };
+  
   if(type === 'fixed'){
-    // Update fixed card in DOM
     const n = idx;
     if(name) document.getElementById(`card${n}Title`).textContent = name;
     if(category) document.getElementById(`card${n}Cat`).textContent = category;
@@ -2570,25 +2821,27 @@ async function saveEditRecipe(){
     if(finalImg){
       const imgEl = document.getElementById(`card${n}Img`);
       const isVideo = finalImg.match(/\.mp4|webm|video/i);
-      if(isVideo){
-        setCardMedia(n, finalImg, true);
-      } else {
-        imgEl.src = finalImg;
-        imgEl.style.display = 'block';
-      }
+      if(isVideo) setCardMedia(n, finalImg, true);
+      else { imgEl.src = finalImg; imgEl.style.display = 'block'; }
     }
-    // Make card visible + add to homeSlots
     document.getElementById(`card${n}`).style.display = 'flex';
     if(!homeSlots.includes(n)){ homeSlots.push(n); homeSlots.sort((a,b)=>a-b); await saveHomeSlots(); }
     
-    // המשתמש ערך ידנית — אפשר שמירה
+    // Save extra data for fixed card
+    const extraKey = `card${n}_extra`;
+    try{ localStorage.setItem(extraKey, JSON.stringify(extraData)); }catch(e){}
+    // Also save to Supabase
+    const sb = await initSupabase();
+    if(sb){
+      try{ await sb.from('recipes').upsert({id:extraKey, data:JSON.stringify(extraData), updated_at:new Date().toISOString()},{onConflict:'id'}); }catch(e){}
+    }
+    
     dataFullyLoaded = true;
     markChanged();
     await savePageData();
     toast(`✅ כרטיס ${n} עודכן ונשמר!`);
     
   } else {
-    // Update dynamic recipe
     const r = srRecipes[idx];
     if(!r){ toast('❌ שגיאה'); return; }
     r.name = name;
@@ -2596,18 +2849,18 @@ async function saveEditRecipe(){
     r.author = author;
     if(erFileData){ r.thumb = erFileData; r.image = erFileData; }
     else if(imgUrl){ r.thumb = imgUrl; }
-    r.url = document.getElementById('erUrl').value.trim();
-    r.ingredients = document.getElementById('erIngredients').value.trim();
-    r.steps = document.getElementById('erSteps').value.trim();
-    r.prepTime = document.getElementById('erPrepTime').value.trim();
-    r.servings = document.getElementById('erServings').value.trim();
+    r.url = extraData.url;
+    r.ingredients = extraData.ingredients;
+    r.steps = extraData.steps;
+    r.prepTime = extraData.prepTime;
+    r.servings = extraData.servings;
+    r.photos = erCurrentPhotos;
     
     await saveSRRecipes();
     toast(`✅ "${r.name}" עודכן!`);
   }
   
   closeEditRecipe();
-  // Refresh all recipes modal if open
   if(document.getElementById('allRecipesModal').classList.contains('open')){
     allRecipesData = buildAllRecipesData();
     filterAllRecipes(currentCatFilter);
@@ -2618,11 +2871,6 @@ async function deleteDynamic(idx){
   const r = srRecipes[idx];
   if(!r) return;
   
-  if(sessionStorage.getItem('sr_edit_auth') !== '1'){
-    const pw = prompt('🔐 סיסמת עריכה:');
-    if(pw !== EDIT_PASSWORD){ if(pw !== null) toast('❌ סיסמה שגויה'); return; }
-    sessionStorage.setItem('sr_edit_auth', '1');
-  }
   
   if(!confirm(`למחוק את "${r.name}"?`)) return;
   
