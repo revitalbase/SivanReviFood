@@ -1373,9 +1373,6 @@ body { font-family: 'Heebo', sans-serif; background: var(--cream); color: var(--
   <button onclick="this.parentElement.remove()" style="background:none;border:none;color:#666;cursor:pointer;font-size:10px">✕</button>
 </div>
 <script>
-// ── סיסמת עריכה ──
-const EDIT_PASSWORD = '0211';
-
 // ── ניקוי מידע פגום ──
 function clearCorruptData(){
   if(!confirm('למחוק את כל המידע המקומי הפגום?\nהדף יטען מחדש מ-Supabase.')) return;
@@ -1471,34 +1468,15 @@ async function testSaveLoad(){
   alert(results.join('\n'));
 }
 
-function checkEditAccess() {
-  // תמיד הצג את הכפתור הקטן
-  document.getElementById('editToggle').style.display = 'flex';
-  // בדוק אם כבר מאומת
-  if(sessionStorage.getItem('sr_edit_auth') === '1') return;
-  // בדוק URL
-  const params = new URLSearchParams(window.location.search);
-  if(params.get('edit') === EDIT_PASSWORD) {
-    sessionStorage.setItem('sr_edit_auth', '1');
-  }
-}
+// ── עריכה (ללא סיסמה) ──
 
-function promptEditPassword() {
-  const pw = prompt('🔐 סיסמת עריכה:');
-  if(pw === EDIT_PASSWORD) {
-    sessionStorage.setItem('sr_edit_auth', '1');
-    setTimeout(toggleEdit, 100);
-  } else if(pw !== null) {
-    toast('❌ סיסמה שגויה');
-  }
+function checkEditAccess() {
+  document.getElementById('editToggle').style.display = 'flex';
+  sessionStorage.setItem('sr_edit_auth', '1');
 }
 
 function handleEditClick() {
-  if(sessionStorage.getItem('sr_edit_auth') === '1') {
-    toggleEdit();
-  } else {
-    promptEditPassword();
-  }
+  toggleEdit();
 }
 
 // הפעל בטעינה
