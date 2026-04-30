@@ -1065,7 +1065,7 @@ body { font-family: 'Heebo', sans-serif; background: var(--cream); color: var(--
     <div class="feature-tag" id="featTag">מנת השבוע</div>
     <h2 class="feature-title" id="featTitle">טום יאם שרימפס — <em>מרק שגנב לנו את הלב</em><br>להתאהב <em>מחדש</em></h2>
     <p class="feature-text" id="featText">מרק שמגיע מתאילנד וחזר איתנו הביתה. פעם ראשונה הכנו אותו יחד ומאז הוא חלק מהמשפחה.</p>
-    <button class="feature-btn" onclick="openRecipeDetail('fixed',4)">לצפייה במתכון</button>
+    <button class="feature-btn" onclick="try{openRecipeDetail('fixed',4)}catch(e){alert('שגיאה: '+e.message)}">לצפייה במתכון</button>
   </div>
   <div class="feature-img">
     <img id="featImg" src="https://res.cloudinary.com/dt3n4di9i/image/upload/v1774972069/IMG_3723_rqymqf.jpg" />
