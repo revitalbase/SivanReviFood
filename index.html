@@ -1373,6 +1373,28 @@ body { font-family: 'Heebo', sans-serif; background: var(--cream); color: var(--
   <button onclick="this.parentElement.remove()" style="background:none;border:none;color:#666;cursor:pointer;font-size:10px">✕</button>
 </div>
 <script>
+
+// ── Server-side API (עוקף CORS) ──
+async function cloudLoad(id){
+  try{
+    const r = await fetch('/api/load?id=' + encodeURIComponent(id));
+    const j = await r.json();
+    return j.data || null;
+  }catch(e){ console.warn('cloudLoad error:', e); return null; }
+}
+
+async function cloudSave(id, data){
+  try{
+    const r = await fetch('/api/save', {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({id, data})
+    });
+    const j = await r.json();
+    return j.success || false;
+  }catch(e){ console.warn('cloudSave error:', e); return false; }
+}
+
 // ── ניקוי מידע פגום ──
 function clearCorruptData(){
   if(!confirm('למחוק את כל המידע המקומי הפגום?\nהדף יטען מחדש מ-Supabase.')) return;
@@ -1391,16 +1413,12 @@ function clearCorruptData(){
 
 // ── טעינת כפייה מ-Supabase ──
 async function forceSupabaseLoad(){
-  toast('☁️ טוען מ-Supabase...');
+  toast('☁️ טוען מהענן...');
   try {
-    const sb = await initSupabase();
-    if(!sb){ toast('❌ Supabase לא מחובר'); return; }
+    const cloudJson = await cloudLoad('page_content');
+    if(!cloudJson){ toast('⚠️ אין מידע בענן'); return; }
     
-    const {data:row, error} = await sb.from('recipes').select('data').eq('id','page_content').single();
-    if(error){ toast('❌ ' + error.message); return; }
-    if(!row?.data){ toast('⚠️ אין מידע ב-Supabase'); return; }
-    
-    const parsed = JSON.parse(row.data);
+    const parsed = JSON.parse(cloudJson);
     const hasImages = parsed.cards?.some(c => c.img && c.img.length > 100);
     
     if(!hasImages) {
@@ -1411,7 +1429,7 @@ async function forceSupabaseLoad(){
     }
     
     // שמור ל-localStorage
-    localStorage.setItem('sr_page_data', row.data);
+    localStorage.setItem('sr_page_data', cloudJson);
     toast('✅ נטען מ-Supabase ונשמר! טוען מחדש...');
     setTimeout(() => location.reload(), 1000);
   } catch(e) {
@@ -1448,17 +1466,13 @@ async function testSaveLoad(){
   
   // Test Supabase
   try {
-    const sb = await initSupabase();
-    if(sb) {
-      const {data,error} = await sb.from('recipes').select('id,data').eq('id','page_content').single();
-      if(error) results.push('❌ Supabase page_content: ' + error.message);
-      else {
-        const pd = JSON.parse(data.data);
-        const hasImages = pd.cards?.some(c => c.img && c.img.length > 100);
-        results.push(`✅ Supabase page_content: ${(data.data.length/1024).toFixed(0)}KB, תמונות: ${hasImages?'כן':'לא'}`);
-      }
+    const cJson = await cloudLoad('page_content');
+    if(cJson){
+      const pd = JSON.parse(cJson);
+      const hasImages = pd.cards?.some(c => c.img && c.img.length > 100);
+      results.push(`✅ ענן: ${(cJson.length/1024).toFixed(0)}KB, תמונות: ${hasImages?'כן':'לא'}`);
     } else {
-      results.push('⚠️ Supabase לא מחובר');
+      results.push('⚠️ ענן ריק');
     }
   } catch(e) { results.push('❌ Supabase: ' + e.message); }
   
@@ -1540,16 +1554,11 @@ window.addEventListener('DOMContentLoaded', () => {
       
       console.log('✅ כל הנתונים נטענו');
       
-      // Load fixed card extras from Supabase
+      // Load fixed card extras from cloud
       try {
-        const sb2 = await initSupabase();
-        if(sb2){
-          for(let n=1;n<=9;n++){
-            try{
-              const {data:ex} = await sb2.from('recipes').select('data').eq('id',`card${n}_extra`).single();
-              if(ex?.data) localStorage.setItem(`card${n}_extra`, ex.data);
-            }catch(e){}
-          }
+        for(let n=1;n<=9;n++){
+          const exJson = await cloudLoad(`card${n}_extra`);
+          if(exJson) localStorage.setItem(`card${n}_extra`, exJson);
         }
       }catch(e){}
       
@@ -1801,17 +1810,14 @@ async function loadSRRecipes(){
     if(local){ const p=JSON.parse(local); if(Array.isArray(p)) recipes = p; }
   }catch(e){}
   
-  // Supabase (עדכני יותר)
+  // ענן (דרך API שרתי)
   try{
-    const sb = await initSupabase();
-    if(sb){
-      const {data,error} = await sb.from('recipes').select('data').eq('id','shared').single();
-      if(!error && data?.data){
-        const p = JSON.parse(data.data);
-        if(Array.isArray(p)){
-          recipes = p;
-          try{ localStorage.setItem('sr_recipes', data.data); }catch(e){}
-        }
+    const cloudJson = await cloudLoad('shared');
+    if(cloudJson){
+      const p = JSON.parse(cloudJson);
+      if(Array.isArray(p) && p.length >= recipes.length){
+        recipes = p;
+        try{ localStorage.setItem('sr_recipes', cloudJson); }catch(e){}
       }
     }
   }catch(e){}
@@ -1823,14 +1829,7 @@ async function loadSRRecipes(){
 async function saveSRRecipes(){
   const json = JSON.stringify(srRecipes);
   try{ localStorage.setItem('sr_recipes', json); }catch(e){}
-  const sb = await initSupabase();
-  if(sb){
-    try {
-      const {error} = await sb.from('recipes').upsert({id:'shared',data:json,updated_at:new Date().toISOString()},{onConflict:'id'});
-      if(error) console.error('save recipes error:',error);
-      else console.log('✅ Recipes saved!');
-    } catch(e){ console.error('save recipes exception:', e); }
-  }
+  await cloudSave('shared', json);
 }
 
 function toast(m){
@@ -1992,29 +1991,24 @@ async function loadRatings(){
     if(local){ srRatings = JSON.parse(local); renderRatings(); }
   }catch(e){}
 
-  // טען מ-Supabase — מזג (לוקח את המקסימום)
+  // טען מענן ומזג
   try{
-    const sb = await initSupabase();
-    if(sb){
-      const {data,error} = await sb.from('recipes').select('data').eq('id','sr_ratings').single();
-      if(!error && data?.data){
-        const cloud = JSON.parse(data.data);
-        // מזג: לכל כרטיס, שמור את הדירוג עם יותר הצבעות
-        let merged = {...srRatings};
-        for(const key in cloud){
-          if(!merged[key] || (cloud[key].count||0) > (merged[key].count||0)){
-            merged[key] = cloud[key];
-          }
+    const cloudJson = await cloudLoad('sr_ratings');
+    if(cloudJson){
+      const cloud = JSON.parse(cloudJson);
+      let merged = {...srRatings};
+      for(const key in cloud){
+        if(!merged[key] || (cloud[key].count||0) > (merged[key].count||0)){
+          merged[key] = cloud[key];
         }
-        srRatings = merged;
-        const json = JSON.stringify(srRatings);
-        try{ localStorage.setItem('sr_ratings', json); }catch(e){}
-        // עדכן גם Supabase עם המיזוג
-        try{ await sb.from('recipes').upsert({id:'sr_ratings',data:json,updated_at:new Date().toISOString()},{onConflict:'id'}); }catch(e){}
-        renderRatings();
       }
+      srRatings = merged;
+      const json = JSON.stringify(srRatings);
+      try{ localStorage.setItem('sr_ratings', json); }catch(e){}
+      await cloudSave('sr_ratings', json);
+      renderRatings();
     }
-  }catch(e){ console.log('loadRatings error:', e); }
+  }catch(e){}
 }
 
 async function saveRatings(){
@@ -2022,14 +2016,7 @@ async function saveRatings(){
   // שמור ל-localStorage מיד
   try{ localStorage.setItem('sr_ratings', json); }catch(e){}
   // שמור ל-Supabase
-  try{
-    const sb = await initSupabase();
-    if(sb){
-      const {error} = await sb.from('recipes').upsert({id:'sr_ratings',data:json,updated_at:new Date().toISOString()},{onConflict:'id'});
-      if(error) console.error('save ratings error:', error);
-      else console.log('⭐ ratings saved to Supabase');
-    }
-  }catch(e){ console.error('saveRatings error:', e); }
+  await cloudSave('sr_ratings', json);
 }
 
 function renderRatings(){
@@ -2092,14 +2079,8 @@ async function manualBackup(){
   URL.revokeObjectURL(a.href);
 
   // גם שמור ל-Supabase כגיבוי
-  const sb = await initSupabase();
-  if(sb){
-    const dateStr = new Date().toISOString().slice(0,10);
-    sb.from('recipes').upsert({id:`backup_${dateStr}`, data:json, updated_at:new Date().toISOString()},{onConflict:'id'})
-      .then(()=> toast(`💾 גיבוי נשמר!`));
-  } else {
-    toast(`💾 גיבוי הורד!`);
-  }
+  const dateStr = new Date().toISOString().slice(0,10);
+  cloudSave(`backup_${dateStr}`, json).then(ok => toast(ok ? '💾 גיבוי נשמר!' : '💾 גיבוי הורד!'));
 }
 
 async function restoreBackup(e){
@@ -2112,8 +2093,7 @@ async function restoreBackup(e){
       if(data.pageContent){
         // שחזר תוכן דף
         localStorage.setItem('sr_page_data', JSON.stringify(data.pageContent));
-        const sb = await initSupabase();
-        if(sb) await sb.from('recipes').upsert({id:'page_content',data:JSON.stringify(data.pageContent),updated_at:new Date().toISOString()},{onConflict:'id'});
+        await cloudSave('page_content', JSON.stringify(data.pageContent));
         loadPageData();
       }
       if(data.recipes){
@@ -2142,11 +2122,9 @@ async function autoBackup(){
   const now = Date.now();
   const last = parseInt(localStorage.getItem(lastKey)||'0');
   if(now - last < 24*60*60*1000) return;
-  const sb = await initSupabase();
-  if(!sb) return;
   const dateStr = new Date().toISOString().slice(0,10);
   const data = { pageContent: collectPageData(), recipes: srRecipes, ratings: srRatings };
-  await sb.from('recipes').upsert({id:`backup_${dateStr}`, data:JSON.stringify(data), updated_at:new Date().toISOString()},{onConflict:'id'});
+  await cloudSave(`backup_${dateStr}`, JSON.stringify(data));
   localStorage.setItem(lastKey, String(now));
   console.log('✅ גיבוי אוטומטי הושלם');
 }
@@ -2221,15 +2199,7 @@ async function savePageData() {
     }));
   } catch(e) {}
   
-  const sb = await initSupabase();
-  if(sb) {
-    try {
-      const {error} = await sb.from('recipes')
-        .upsert({id:'page_content', data:json, updated_at: new Date().toISOString()}, {onConflict:'id'});
-      if(error) { console.error('Supabase save error:', error); }
-      else { savedCloud = true; }
-    } catch(e) { console.error('Supabase save exception:', e); }
-  }
+  savedCloud = await cloudSave('page_content', json);
   
   const dbSv = document.getElementById('dbSave');
   if(savedLocal && savedCloud) {
@@ -2252,19 +2222,20 @@ async function loadPageData() {
     if(local){ data = JSON.parse(local); source = 'local'; }
   } catch(e) {}
   
-  // נסה Supabase (עדכני יותר אם זמין)
+  // נסה ענן (דרך API שרתי — עוקף CORS)
   try {
-    const sb = await initSupabase();
-    if(sb) {
-      const {data:row, error} = await sb.from('recipes').select('data').eq('id','page_content').single();
-      if(!error && row?.data){
-        data = JSON.parse(row.data);
-        source = 'supabase';
-        // עדכן localStorage
-        try{ localStorage.setItem('sr_page_data', row.data); }catch(e){}
+    const cloudJson = await cloudLoad('page_content');
+    if(cloudJson){
+      const cloudData = JSON.parse(cloudJson);
+      const cloudHasImages = cloudData.cards?.some(c => c.img && c.img.length > 100);
+      // ענן מנצח רק אם יש לו תמונות (לא ריק)
+      if(cloudHasImages){
+        data = cloudData;
+        source = 'cloud';
+        try{ localStorage.setItem('sr_page_data', cloudJson); }catch(e){}
       }
     }
-  } catch(e) { console.warn('Supabase load error:', e); }
+  } catch(e) { console.warn('Cloud load error:', e); }
   
   if(!data) {
     const dbD = document.getElementById('dbData');
@@ -2343,20 +2314,16 @@ async function loadTried(){
     if(local) srTried = JSON.parse(local);
   }catch(e){}
   
-  // Supabase — מזג
+  // ענן — מזג
   try{
-    const sb = await initSupabase();
-    if(sb){
-      const {data} = await sb.from('recipes').select('data').eq('id','sr_tried').single();
-      if(data?.data){
-        const cloud = JSON.parse(data.data);
-        // מזג: אם ב-cloud יש ערך שלא קיים ב-local, תוסיף
-        for(const key in cloud){
-          if(srTried[key] === undefined) srTried[key] = cloud[key];
-        }
-        const json = JSON.stringify(srTried);
-        try{ localStorage.setItem('sr_tried', json); }catch(e){}
+    const cloudJson = await cloudLoad('sr_tried');
+    if(cloudJson){
+      const cloud = JSON.parse(cloudJson);
+      for(const key in cloud){
+        if(srTried[key] === undefined) srTried[key] = cloud[key];
       }
+      const json = JSON.stringify(srTried);
+      try{ localStorage.setItem('sr_tried', json); }catch(e){}
     }
   }catch(e){}
   renderTried();
@@ -2365,10 +2332,7 @@ async function loadTried(){
 async function saveTried(){
   const json = JSON.stringify(srTried);
   try{ localStorage.setItem('sr_tried', json); }catch(e){}
-  try{
-    const sb = await initSupabase();
-    if(sb) await sb.from('recipes').upsert({id:'sr_tried',data:json,updated_at:new Date().toISOString()},{onConflict:'id'});
-  }catch(e){}
+  await cloudSave('sr_tried', json);
 }
 
 function renderTried(){
@@ -2397,14 +2361,10 @@ let homeSlots = [1,2,3,4,5,6]; // ברירת מחדל — רק כרטיסים ע
 
 async function loadHomeSlots(){
   try{
-    const sb = await initSupabase();
-    if(sb){
-      const {data} = await sb.from('recipes').select('data').eq('id','sr_home_slots').single();
-      if(data?.data){ const p=JSON.parse(data.data); if(Array.isArray(p)) homeSlots=p; }
-    } else {
-      const local=localStorage.getItem('sr_home_slots');
-      if(local) homeSlots=JSON.parse(local);
-    }
+    const local=localStorage.getItem('sr_home_slots');
+    if(local) homeSlots=JSON.parse(local);
+    const cloudJson = await cloudLoad('sr_home_slots');
+    if(cloudJson){ const p=JSON.parse(cloudJson); if(Array.isArray(p)) homeSlots=p; }
   }catch(e){}
   applyHomeSlots();
 }
@@ -2412,10 +2372,7 @@ async function loadHomeSlots(){
 async function saveHomeSlots(){
   const json=JSON.stringify(homeSlots);
   try{localStorage.setItem('sr_home_slots',json);}catch(e){}
-  const sb=await initSupabase();
-  if(sb){
-    try{ await sb.from('recipes').upsert({id:'sr_home_slots',data:json,updated_at:new Date().toISOString()},{onConflict:'id'}); }catch(e){}
-  }
+  await cloudSave('sr_home_slots', json);
 }
 
 function applyHomeSlots(){
@@ -2832,11 +2789,7 @@ async function saveEditRecipe(){
     // Save extra data for fixed card
     const extraKey = `card${n}_extra`;
     try{ localStorage.setItem(extraKey, JSON.stringify(extraData)); }catch(e){}
-    // Also save to Supabase
-    const sb = await initSupabase();
-    if(sb){
-      try{ await sb.from('recipes').upsert({id:extraKey, data:JSON.stringify(extraData), updated_at:new Date().toISOString()},{onConflict:'id'}); }catch(e){}
-    }
+    await cloudSave(extraKey, JSON.stringify(extraData));
     
     dataFullyLoaded = true;
     markChanged();
@@ -2927,18 +2880,17 @@ const GALLERY_AUTO_INTERVAL = 4000; // 4 שניות בין תמונות
 
 async function loadGalleryItems(){
   try{
-    const sb = await initSupabase();
-    if(sb){
-      const {data} = await sb.from('recipes').select('data').eq('id','sr_gallery').single();
-      if(data?.data){
-        const extra = JSON.parse(data.data);
-        if(Array.isArray(extra) && extra.length) galleryItems = galleryItems.concat(extra);
-      }
-    } else {
-      const local = localStorage.getItem('sr_gallery');
-      if(local){
-        const extra = JSON.parse(local);
-        if(Array.isArray(extra)) galleryItems = galleryItems.concat(extra);
+    const local = localStorage.getItem('sr_gallery');
+    if(local){
+      const extra = JSON.parse(local);
+      if(Array.isArray(extra)) galleryItems = galleryItems.concat(extra);
+    }
+    const cloudJson = await cloudLoad('sr_gallery');
+    if(cloudJson){
+      const extra = JSON.parse(cloudJson);
+      if(Array.isArray(extra) && extra.length > (JSON.parse(local||'[]')).length){
+        galleryItems = galleryItems.concat(extra);
+        try{ localStorage.setItem('sr_gallery', cloudJson); }catch(e){}
       }
     }
   }catch(e){}
@@ -2949,20 +2901,15 @@ async function loadGalleryItems(){
 async function saveGalleryExtra(extraItems){
   let current = [];
   try{
-    const sb = await initSupabase();
-    if(sb){
-      const {data} = await sb.from('recipes').select('data').eq('id','sr_gallery').single();
-      if(data?.data) current = JSON.parse(data.data) || [];
-    } else {
-      const local = localStorage.getItem('sr_gallery');
-      if(local) current = JSON.parse(local) || [];
-    }
+    const local = localStorage.getItem('sr_gallery');
+    if(local) current = JSON.parse(local) || [];
+    const cj = await cloudLoad('sr_gallery');
+    if(cj){ const p = JSON.parse(cj); if(Array.isArray(p) && p.length > current.length) current = p; }
   }catch(e){}
   current = current.concat(extraItems);
   const json = JSON.stringify(current);
   try{ localStorage.setItem('sr_gallery', json); }catch(e){}
-  const sb = await initSupabase();
-  if(sb) await sb.from('recipes').upsert({id:'sr_gallery',data:json,updated_at:new Date().toISOString()},{onConflict:'id'});
+  await cloudSave('sr_gallery', json);
 }
 
 function renderGallery(){

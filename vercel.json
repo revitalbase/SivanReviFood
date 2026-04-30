@@ -4,6 +4,8 @@
     { "src": "/api/claude", "dest": "/api/claude.js" },
     { "src": "/api/config", "dest": "/api/config.js" },
     { "src": "/api/thumb",  "dest": "/api/thumb.js"  },
+    { "src": "/api/load",   "dest": "/api/load.js"   },
+    { "src": "/api/save",   "dest": "/api/save.js"   },
     { "src": "/(.*)", "dest": "/index.html" }
   ]
 }
