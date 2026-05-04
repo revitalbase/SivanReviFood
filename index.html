@@ -1717,7 +1717,26 @@ window.addEventListener('DOMContentLoaded', () => {
       await loadTried();
       
       console.log('✅ כל הנתונים נטענו');
-      dataFullyLoaded = true; // תמיד מאפשר שמירה אחרי טעינה
+      dataFullyLoaded = true;
+      
+      // סנכרן תוכן מתכונים לענן (כדי שמובייל יראה)
+      const localHasExtras = [1,2,3,4,5,6,7,8,9].some(n => {
+        try{ const e = JSON.parse(localStorage.getItem(`card${n}_extra`)||'{}'); return !!(e.ingredients || e.steps); }catch(e){ return false; }
+      });
+      if(localHasExtras){
+        // בדוק אם page_content בענן כבר כולל extras
+        try{
+          const pd = localStorage.getItem('sr_page_data');
+          if(pd){
+            const parsed = JSON.parse(pd);
+            const cloudHasExtras = parsed?.cards?.some(c => c?.ingredients || c?.steps);
+            if(!cloudHasExtras){
+              console.log('🔄 מסנכרן תוכן מתכונים לענן...');
+              setTimeout(() => savePageData(), 2000);
+            }
+          }
+        }catch(e){}
+      }
       
       // Load fixed card extras from cloud
       try {
@@ -2391,11 +2410,20 @@ function collectPageData() {
   const cards = [];
   [1,2,3,4,5,6,7,8,9].forEach(n => {
     const el = document.getElementById(`card${n}Img`);
+    // כלול גם את תוכן המתכון (מצרכים, שלבים וכו')
+    let extra = {};
+    try{ extra = JSON.parse(localStorage.getItem(`card${n}_extra`) || '{}'); }catch(e){}
     cards.push({
       img:   el ? (el.src||'') : '',
       cat:   g(`card${n}Cat`),
       title: g(`card${n}Title`),
       who:   g(`card${n}Who`),
+      ingredients: extra.ingredients || '',
+      steps: extra.steps || '',
+      prepTime: extra.prepTime || '',
+      servings: extra.servings || '',
+      url: extra.url || '',
+      photos: extra.photos || [],
     });
   });
 
@@ -2478,7 +2506,7 @@ async function loadPageData() {
     if(h.sub) document.getElementById('heroSub').textContent = h.sub;
   }
 
-  // שחזר כרטיסים
+  // שחזר כרטיסים + תוכן מתכונים
   if(data.cards) {
     data.cards.forEach((c, i) => {
       const n = i + 1;
@@ -2494,6 +2522,19 @@ async function loadPageData() {
       if(title && c.title) title.textContent = c.title;
       const who = document.getElementById(`card${n}Who`);
       if(who && c.who) who.textContent = c.who;
+      
+      // שחזר תוכן מתכון ל-localStorage (כדי ש-openRecipeDetail ימצא)
+      if(c.ingredients || c.steps){
+        const extra = {
+          ingredients: c.ingredients || '',
+          steps: c.steps || '',
+          prepTime: c.prepTime || '',
+          servings: c.servings || '',
+          url: c.url || '',
+          photos: c.photos || [],
+        };
+        try{ localStorage.setItem(`card${n}_extra`, JSON.stringify(extra)); }catch(e){}
+      }
     });
   }
 
