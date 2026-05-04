@@ -1688,6 +1688,7 @@ window.addEventListener('DOMContentLoaded', () => {
       await loadTried();
       
       console.log('✅ כל הנתונים נטענו');
+      dataFullyLoaded = true; // תמיד מאפשר שמירה אחרי טעינה
       
       // Load fixed card extras from cloud
       try {
@@ -2385,25 +2386,12 @@ function collectPageData() {
 }
 
 async function savePageData() {
-  // === מניעת שמירת מידע ריק ===
   if(!dataFullyLoaded) {
-    console.warn('⛔ savePageData נחסם — המידע לא נטען במלואו');
-    const dbSv = document.getElementById('dbSave');
-    if(dbSv) dbSv.innerHTML = '<span class="warn">⛔ שמירה נחסמה (לא נטען)</span>';
+    console.warn('⛔ savePageData נחסם — המידע לא נטען');
     return;
   }
   
   const data = collectPageData();
-  
-  // בדוק שלפחות כרטיס אחד יש לו תמונה אמיתית
-  const hasAnyImage = data.cards?.some(c => c.img && c.img.length > 100);
-  if(!hasAnyImage) {
-    console.warn('⛔ savePageData נחסם — אין תמונות (מידע ריק)');
-    const dbSv = document.getElementById('dbSave');
-    if(dbSv) dbSv.innerHTML = '<span class="err">⛔ נחסם: מידע ריק!</span>';
-    return;
-  }
-  
   const json = JSON.stringify(data);
   let savedLocal = false, savedCloud = false;
   
@@ -2513,14 +2501,9 @@ async function loadPageData() {
     });
   }
   
-  // סמן שהמידע נטען בהצלחה עם תוכן אמיתי
-  const hasRealImages = data.cards?.some(c => c.img && c.img.length > 100);
-  if(hasRealImages) {
-    dataFullyLoaded = true;
-    console.log('✅ dataFullyLoaded = true (יש תמונות)');
-  } else {
-    console.warn('⚠️ המידע נטען אבל ללא תמונות — שמירה חסומה');
-  }
+  // סמן שהמידע נטען בהצלחה
+  dataFullyLoaded = true;
+  console.log('✅ dataFullyLoaded = true');
 }
 
 
