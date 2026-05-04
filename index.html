@@ -1544,75 +1544,61 @@ body { font-family: 'Heebo', sans-serif; background: var(--cream); color: var(--
 <script>
 
 // ── Server-side API (עוקף CORS) עם fallback ──
+// ── חיבור ישיר ל-Supabase (ללא מתווכים) ──
+let _sbUrl = null;
+let _sbKey = null;
+
+async function initCloudConfig(){
+  if(_sbUrl) return true;
+  try{
+    const r = await fetch('/api/config');
+    const text = await r.text();
+    // בדוק שזה JSON ולא HTML
+    if(text.startsWith('<') || text.startsWith('<!')) {
+      console.error('❌ /api/config מחזיר HTML במקום JSON');
+      return false;
+    }
+    const cfg = JSON.parse(text);
+    if(cfg.supabaseUrl && cfg.supabaseKey){
+      _sbUrl = cfg.supabaseUrl;
+      _sbKey = cfg.supabaseKey;
+      console.log('✅ Supabase config loaded');
+      return true;
+    }
+  }catch(e){ console.error('❌ initCloudConfig:', e); }
+  return false;
+}
+
 async function cloudLoad(id){
-  const timeout = ms => new Promise((_,rej) => setTimeout(()=>rej(new Error('timeout')), ms));
-  
-  // נסה API שרתי
+  if(!await initCloudConfig()) return null;
   try{
-    const r = await Promise.race([
-      fetch('/api/load?id=' + encodeURIComponent(id) + '&t=' + Date.now(), {cache:'no-store'}),
-      timeout(15000)
-    ]);
-    if(r.ok){
-      const j = await r.json();
-      if(j.data) return j.data;
-    }
-  }catch(e){}
-  
-  // fallback: Supabase REST ישיר
-  try{
-    const cfg = await fetch('/api/config').then(r=>r.json());
-    if(cfg.supabaseUrl){
-      const r = await Promise.race([
-        fetch(`${cfg.supabaseUrl}/rest/v1/recipes?id=eq.${encodeURIComponent(id)}&select=data&t=${Date.now()}`, {
-          headers: {'apikey': cfg.supabaseKey, 'Authorization': 'Bearer ' + cfg.supabaseKey},
-          cache: 'no-store'
-        }),
-        timeout(15000)
-      ]);
-      const rows = await r.json();
-      if(rows?.[0]?.data) return rows[0].data;
-    }
-  }catch(e){}
+    const r = await fetch(`${_sbUrl}/rest/v1/recipes?id=eq.${encodeURIComponent(id)}&select=data&t=${Date.now()}`, {
+      headers: { 'apikey': _sbKey, 'Authorization': 'Bearer ' + _sbKey },
+      cache: 'no-store'
+    });
+    if(!r.ok) throw new Error(`HTTP ${r.status}`);
+    const rows = await r.json();
+    if(rows?.[0]?.data) return rows[0].data;
+  }catch(e){ console.error(`cloudLoad(${id}):`, e); }
   return null;
 }
 
 async function cloudSave(id, data){
-  const timeout = ms => new Promise((_,rej) => setTimeout(()=>rej(new Error('timeout')), ms));
-  
-  // נסה API שרתי
+  if(!await initCloudConfig()) return false;
   try{
-    const r = await Promise.race([
-      fetch('/api/save', {
-        method:'POST',
-        headers:{'Content-Type':'application/json'},
-        body: JSON.stringify({id, data})
-      }),
-      timeout(15000)
-    ]);
-    if(r.ok){ const j = await r.json(); if(j.success) return true; }
-  }catch(e){}
-  
-  // fallback: Supabase REST ישיר
-  try{
-    const cfg = await fetch('/api/config').then(r=>r.json());
-    if(cfg.supabaseUrl){
-      const r = await Promise.race([
-        fetch(`${cfg.supabaseUrl}/rest/v1/recipes?on_conflict=id`, {
-          method:'POST',
-          headers: {
-            'Content-Type':'application/json',
-            'apikey': cfg.supabaseKey,
-            'Authorization': 'Bearer ' + cfg.supabaseKey,
-            'Prefer': 'resolution=merge-duplicates'
-          },
-          body: JSON.stringify({id, data, updated_at: new Date().toISOString()})
-        }),
-        timeout(15000)
-      ]);
-      return r.ok;
-    }
-  }catch(e){}
+    const r = await fetch(`${_sbUrl}/rest/v1/recipes?on_conflict=id`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'apikey': _sbKey,
+        'Authorization': 'Bearer ' + _sbKey,
+        'Prefer': 'resolution=merge-duplicates'
+      },
+      body: JSON.stringify({ id, data, updated_at: new Date().toISOString() })
+    });
+    if(!r.ok) throw new Error(`HTTP ${r.status}`);
+    return true;
+  }catch(e){ console.error(`cloudSave(${id}):`, e); }
   return false;
 }
 
@@ -2488,7 +2474,6 @@ async function savePageData() {
     if(!data.cards || data.cards.length === 0){ console.warn('savePageData: empty'); return; }
     const json = JSON.stringify(data);
     try{ localStorage.setItem('sr_page_data', json); }catch(e){}
-    try{ localStorage.setItem('sr_auto_backup', JSON.stringify({pageContent:data,recipes:srRecipes,ratings:srRatings,timestamp:new Date().toISOString()})); }catch(e){}
     await cloudSave('page_content', json);
   } catch(e){ console.error('savePageData error:', e);
   } finally { isSaving = false; }
@@ -3047,23 +3032,32 @@ function openRecipeDetail(type, idx){
     url = extra.url || '';
     photos = extra.photos || [];
     
-    // אם ריק — נסה ענן ברקע ועדכן
+    // אם ריק — נסה ענן ברקע עם חיווי טעינה
     if(!ingredients && !steps){
+      document.getElementById('rdIngredientsSection').style.display='block';
+      document.getElementById('rdIngredients').innerHTML='<span style="color:var(--gold);font-weight:bold">⏳ טוען מתכון...</span>';
+      
       cloudLoad(`card${n}_extra`).then(cloudJson => {
-        if(!cloudJson) return;
+        if(!cloudJson){
+          document.getElementById('rdIngredients').innerHTML='<span style="color:#aaa">המתכון עדיין לא עודכן. לחצי ✏️ ערכי</span>';
+          return;
+        }
         try{
           const ce = JSON.parse(cloudJson);
           try{ localStorage.setItem(`card${n}_extra`, cloudJson); }catch(e){}
-          // עדכן את המודל אם עדיין פתוח
           if(document.getElementById('recipeDetailOverlay').classList.contains('open') && currentDetailIdx === n && currentDetailType === 'fixed'){
             if(ce.ingredients){ document.getElementById('rdIngredientsSection').style.display='block'; document.getElementById('rdIngredients').textContent=ce.ingredients; }
+            else document.getElementById('rdIngredients').innerHTML='<span style="color:#aaa">אין מצרכים עדיין</span>';
             if(ce.steps){ document.getElementById('rdStepsSection').style.display='block'; document.getElementById('rdSteps').textContent=ce.steps; }
             if(ce.prepTime) document.getElementById('rdPrepTime').textContent='⏱️ '+ce.prepTime;
             if(ce.servings) document.getElementById('rdServings').textContent='🍽️ '+ce.servings;
             if(ce.url){ document.getElementById('rdUrlSection').style.display='block'; document.getElementById('rdUrl').href=ce.url; }
+            if(ce.photos && ce.photos.length) document.getElementById('rdPhotos').innerHTML=ce.photos.map(p=>`<img src="${p}" />`).join('');
           }
         }catch(e){}
-      }).catch(()=>{});
+      }).catch(()=>{
+        document.getElementById('rdIngredients').innerHTML='<span style="color:#aaa">לא הצלחנו לטעון. בדקי חיבור אינטרנט</span>';
+      });
     }
   } else {
     const r = srRecipes[idx];
