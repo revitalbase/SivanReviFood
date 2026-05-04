@@ -1676,33 +1676,8 @@ window.addEventListener('DOMContentLoaded', () => {
       // 1. טען תוכן הדף
       await loadPageData();
       
-      // 2. טען מתכונים דינמיים
+      // 2. טען מתכונים דינמיים (מופיעים רק ב"כל המתכונים")
       srRecipes = await loadSRRecipes();
-      if(srRecipes.length){
-        const grid = document.querySelector('.home-grid');
-        if(grid){
-          srRecipes.forEach((r,i)=>{
-            const card = document.createElement('div');
-            card.className='card'; card.dataset.dynIdx=i;
-            card.innerHTML=`
-              <div class="card-img">
-                <button class="card-edit-btn" onclick="event.stopPropagation();openEditDynamic(${i})" title="ערכי מתכון">✏️</button>
-                <button class="card-delete-btn" onclick="event.stopPropagation();deleteDynamic(${i})" title="מחקי מתכון">🗑️</button>
-                <img src="${r.thumb||r.image||''}" onerror="this.style.display='none'" />
-                <div class="card-accent"></div>
-              </div>
-              <div class="card-body">
-                <div class="card-cat">${r.category||''}</div>
-                <div class="card-title">${r.name||''}</div>
-                <div class="card-meta">
-                  <div class="card-stars">★★★★★</div>
-                  <div class="card-who">${r.author||''}</div>
-                </div>
-              </div>`;
-            grid.insertBefore(card, grid.firstChild);
-          });
-        }
-      }
       
       // 3. טען הגדרות תצוגה
       await loadHomeSlots();
@@ -2196,8 +2171,7 @@ ${rules}`;
   
   closeQuickModal();
   ov.classList.remove('show'); btn.disabled=false;
-  toast(saved ? `🎉 "${r.name}" נשמר!` : `⚠️ "${r.name}" נוסף — בדקי שנשמר`);
-  renderNewCard(r);
+  toast(saved ? `🎉 "${r.name}" נשמר! מופיע ב"כל המתכונים"` : `⚠️ "${r.name}" נוסף — בדקי שנשמר`);
 }
 
 function renderNewCard(r){
