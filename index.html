@@ -876,7 +876,7 @@ body { font-family: 'Heebo', sans-serif; background: var(--cream); color: var(--
         </div>
       </div>
     </div>
-    <div class="card" id="card7" onclick="openRecipeDetail('fixed',7)" style="cursor:pointer" style="display:none">
+    <div class="card" id="card7" style="cursor:pointer;display:none">
       <div class="card-img">
         <button class="card-edit-btn" onclick="event.stopPropagation();openEditCard(7)" title="ערכי מתכון">✏️</button>
         <button class="card-home-btn" id="homeBtn7" onclick="event.stopPropagation();toggleHomeCard(7)" title="הצג/הסתר בעמוד הבית">🏠</button>
@@ -901,7 +901,7 @@ body { font-family: 'Heebo', sans-serif; background: var(--cream); color: var(--
         </div>
       </div>
     </div>
-    <div class="card" id="card8" onclick="openRecipeDetail('fixed',8)" style="cursor:pointer" style="display:none">
+    <div class="card" id="card8" style="cursor:pointer;display:none">
       <div class="card-img">
         <button class="card-edit-btn" onclick="event.stopPropagation();openEditCard(8)" title="ערכי מתכון">✏️</button>
         <button class="card-home-btn" id="homeBtn8" onclick="event.stopPropagation();toggleHomeCard(8)" title="הצג/הסתר בעמוד הבית">🏠</button>
@@ -926,7 +926,7 @@ body { font-family: 'Heebo', sans-serif; background: var(--cream); color: var(--
         </div>
       </div>
     </div>
-    <div class="card" id="card9" onclick="openRecipeDetail('fixed',9)" style="cursor:pointer" style="display:none">
+    <div class="card" id="card9" style="cursor:pointer;display:none">
       <div class="card-img">
         <button class="card-edit-btn" onclick="event.stopPropagation();openEditCard(9)" title="ערכי מתכון">✏️</button>
         <button class="card-home-btn" id="homeBtn9" onclick="event.stopPropagation();toggleHomeCard(9)" title="הצג/הסתר בעמוד הבית">🏠</button>
@@ -1517,8 +1517,8 @@ async function cloudLoad(id){
   // נסה API שרתי
   try{
     const r = await Promise.race([
-      fetch('/api/load?id=' + encodeURIComponent(id)),
-      timeout(5000)
+      fetch('/api/load?id=' + encodeURIComponent(id) + '&t=' + Date.now(), {cache:'no-store'}),
+      timeout(15000)
     ]);
     if(r.ok){
       const j = await r.json();
@@ -1531,10 +1531,11 @@ async function cloudLoad(id){
     const cfg = await fetch('/api/config').then(r=>r.json());
     if(cfg.supabaseUrl){
       const r = await Promise.race([
-        fetch(`${cfg.supabaseUrl}/rest/v1/recipes?id=eq.${encodeURIComponent(id)}&select=data`, {
-          headers: {'apikey': cfg.supabaseKey, 'Authorization': 'Bearer ' + cfg.supabaseKey}
+        fetch(`${cfg.supabaseUrl}/rest/v1/recipes?id=eq.${encodeURIComponent(id)}&select=data&t=${Date.now()}`, {
+          headers: {'apikey': cfg.supabaseKey, 'Authorization': 'Bearer ' + cfg.supabaseKey},
+          cache: 'no-store'
         }),
-        timeout(5000)
+        timeout(15000)
       ]);
       const rows = await r.json();
       if(rows?.[0]?.data) return rows[0].data;
@@ -1554,7 +1555,7 @@ async function cloudSave(id, data){
         headers:{'Content-Type':'application/json'},
         body: JSON.stringify({id, data})
       }),
-      timeout(8000)
+      timeout(15000)
     ]);
     if(r.ok){ const j = await r.json(); if(j.success) return true; }
   }catch(e){}
@@ -1574,7 +1575,7 @@ async function cloudSave(id, data){
           },
           body: JSON.stringify({id, data, updated_at: new Date().toISOString()})
         }),
-        timeout(8000)
+        timeout(15000)
       ]);
       return r.ok;
     }
@@ -1616,7 +1617,7 @@ async function forceSupabaseLoad(){
     }
     
     // שמור ל-localStorage
-    localStorage.setItem('sr_page_data', cloudJson);
+    try{ localStorage.setItem('sr_page_data', cloudJson); }catch(e){}
     toast('✅ נטען מ-Supabase ונשמר! טוען מחדש...');
     setTimeout(() => location.reload(), 1000);
   } catch(e) {
@@ -1722,7 +1723,7 @@ window.addEventListener('DOMContentLoaded', () => {
       try {
         for(let n=1;n<=9;n++){
           const exJson = await cloudLoad(`card${n}_extra`);
-          if(exJson) localStorage.setItem(`card${n}_extra`, exJson);
+          try{ if(exJson) localStorage.setItem(`card${n}_extra`, exJson); }catch(e){}
         }
       }catch(e){}
       
@@ -2345,7 +2346,7 @@ async function restoreBackup(e){
       const data = JSON.parse(ev.target.result);
       if(data.pageContent){
         // שחזר תוכן דף
-        localStorage.setItem('sr_page_data', JSON.stringify(data.pageContent));
+        try{ localStorage.setItem('sr_page_data', JSON.stringify(data.pageContent)); }catch(e){}
         await cloudSave('page_content', JSON.stringify(data.pageContent));
         loadPageData();
       }
@@ -2378,7 +2379,7 @@ async function autoBackup(){
   const dateStr = new Date().toISOString().slice(0,10);
   const data = { pageContent: collectPageData(), recipes: srRecipes, ratings: srRatings };
   await cloudSave(`backup_${dateStr}`, JSON.stringify(data));
-  localStorage.setItem(lastKey, String(now));
+  try{ localStorage.setItem(lastKey, String(now)); }catch(e){}
   console.log('✅ גיבוי אוטומטי הושלם');
 }
 
@@ -2799,7 +2800,7 @@ function openEditCard(n){
       if(!cloudJson) return;
       try{
         const ce = JSON.parse(cloudJson);
-        localStorage.setItem(extraKey, cloudJson);
+        try{ localStorage.setItem(extraKey, cloudJson); }catch(e){}
         if(document.getElementById('editRecipeOverlay').classList.contains('open')){
           if(ce.ingredients) document.getElementById('erIngredients').value = ce.ingredients;
           if(ce.steps) document.getElementById('erSteps').value = ce.steps;
@@ -2978,7 +2979,7 @@ function openRecipeDetail(type, idx){
         if(!cloudJson) return;
         try{
           const ce = JSON.parse(cloudJson);
-          localStorage.setItem(`card${n}_extra`, cloudJson);
+          try{ localStorage.setItem(`card${n}_extra`, cloudJson); }catch(e){}
           // עדכן את המודל אם עדיין פתוח
           if(document.getElementById('recipeDetailOverlay').classList.contains('open') && currentDetailIdx === n && currentDetailType === 'fixed'){
             if(ce.ingredients){ document.getElementById('rdIngredientsSection').style.display='block'; document.getElementById('rdIngredients').textContent=ce.ingredients; }
