@@ -306,6 +306,26 @@ body { font-family: 'Heebo', sans-serif; background: var(--cream); color: var(--
   box-shadow: 0 2px 8px rgba(0,0,0,.15);
 }
 .card-edit-btn:hover { background: var(--gold); color: #fff; transform: scale(1.1); }
+.card-home-btn {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  width: 28px;
+  height: 28px;
+  background: rgba(255,255,255,.7);
+  border: none;
+  border-radius: 50%;
+  font-size: 13px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 5;
+  transition: .2s;
+  box-shadow: 0 1px 4px rgba(0,0,0,.1);
+}
+.card-home-btn.on { background: var(--gold); }
+.card-home-btn:hover { transform: scale(1.15); }
 .card-delete-btn {
   position: absolute;
   top: 8px;
@@ -615,7 +635,7 @@ body { font-family: 'Heebo', sans-serif; background: var(--cream); color: var(--
   .home-grid { grid-template-columns: repeat(2, 1fr); gap: 10px; }
   .card-img { height: 120px; }
   .card-body { padding: 8px 10px; }
-  .card-title { font-size: 13px; }
+  .card-title { font-size: 13px; cursor: pointer; color: var(--gold); text-decoration: underline; text-decoration-color: rgba(201,169,110,.3); text-underline-offset: 2px; }
   .card-cat { font-size: 8px; }
   .card-who { font-size: 10px; }
   .card-stars { gap: 2px; }
@@ -623,6 +643,7 @@ body { font-family: 'Heebo', sans-serif; background: var(--cream); color: var(--
   .card-bottom { padding: 6px 10px; }
   .tried-toggle button { font-size: 11px; padding: 4px 8px; }
   .card-edit-btn { width: 26px; height: 26px; font-size: 11px; }
+  .card-home-btn { width: 22px; height: 22px; font-size: 10px; }
   .feature { grid-template-columns: 1fr; padding: 28px 16px; gap: 20px; }
   .feature-title { font-size: 22px; }
   .edit-panel { width: 100%; }
@@ -684,12 +705,13 @@ body { font-family: 'Heebo', sans-serif; background: var(--cream); color: var(--
     <div class="card" id="card1" onclick="openRecipeDetail('fixed',1)" style="cursor:pointer">
       <div class="card-img">
         <button class="card-edit-btn" onclick="event.stopPropagation();openEditCard(1)" title="ערכי מתכון">✏️</button>
-        <img id="card1Img" src="https://res.cloudinary.com/dt3n4di9i/image/upload/v1774972052/IMG_9063_zgziqt.jpg" onerror="this.style.display='none'" />
+        <button class="card-home-btn" id="homeBtn1" onclick="event.stopPropagation();toggleHomeCard(1)" title="הצג/הסתר בעמוד הבית">🏠</button>
+        <img id="card1Img" onclick="event.stopPropagation();openRecipeDetail('fixed',1)" src="https://res.cloudinary.com/dt3n4di9i/image/upload/v1774972052/IMG_9063_zgziqt.jpg" onerror="this.style.display='none'" />
         <div class="card-accent"></div>
       </div>
-      <div class="card-body">
+      <div class="card-body" onclick="event.stopPropagation();openRecipeDetail('fixed',1)" style="cursor:pointer">
         <div class="card-cat" id="card1Cat">דג בהשראת  בטשון</div>
-        <div class="card-title" id="card1Title">סביצ'ה דג לבן בהשראת בטשון</div>
+        <div class="card-title" id="card1Title" onclick="event.stopPropagation();openRecipeDetail('fixed',1)">סביצ'ה דג לבן בהשראת בטשון</div>
         <div class="card-meta">
           <div class="card-stars">
             <div class="star-rating" id="stars1" data-card="1" data-rating="0"><span data-v="1">★</span><span data-v="2">★</span><span data-v="3">★</span><span data-v="4">★</span><span data-v="5">★</span></div>
@@ -708,12 +730,13 @@ body { font-family: 'Heebo', sans-serif; background: var(--cream); color: var(--
     <div class="card" id="card2" onclick="openRecipeDetail('fixed',2)" style="cursor:pointer">
       <div class="card-img">
         <button class="card-edit-btn" onclick="event.stopPropagation();openEditCard(2)" title="ערכי מתכון">✏️</button>
-        <img id="card2Img" src="https://res.cloudinary.com/dt3n4di9i/image/upload/v1774972098/IMG_5018_zsdhts.jpg" onerror="this.style.display='none'" />
+        <button class="card-home-btn" id="homeBtn2" onclick="event.stopPropagation();toggleHomeCard(2)" title="הצג/הסתר בעמוד הבית">🏠</button>
+        <img id="card2Img" onclick="event.stopPropagation();openRecipeDetail('fixed',2)" src="https://res.cloudinary.com/dt3n4di9i/image/upload/v1774972098/IMG_5018_zsdhts.jpg" onerror="this.style.display='none'" />
         <div class="card-accent"></div>
       </div>
-      <div class="card-body">
+      <div class="card-body" onclick="event.stopPropagation();openRecipeDetail('fixed',2)" style="cursor:pointer">
         <div class="card-cat" id="card2Cat">עיקרית</div>
-        <div class="card-title" id="card2Title">מלפוף</div>
+        <div class="card-title" id="card2Title" onclick="event.stopPropagation();openRecipeDetail('fixed',2)">מלפוף</div>
         <div class="card-meta">
           <div class="card-stars">
             <div class="star-rating" id="stars2" data-card="2" data-rating="0"><span data-v="1">★</span><span data-v="2">★</span><span data-v="3">★</span><span data-v="4">★</span><span data-v="5">★</span></div>
@@ -732,12 +755,13 @@ body { font-family: 'Heebo', sans-serif; background: var(--cream); color: var(--
     <div class="card" id="card3" onclick="openRecipeDetail('fixed',3)" style="cursor:pointer">
       <div class="card-img">
         <button class="card-edit-btn" onclick="event.stopPropagation();openEditCard(3)" title="ערכי מתכון">✏️</button>
-        <img id="card3Img" src="https://res.cloudinary.com/dt3n4di9i/image/upload/v1774972079/IMG_9255_bxid0b.jpg" onerror="this.style.display='none'" />
+        <button class="card-home-btn" id="homeBtn3" onclick="event.stopPropagation();toggleHomeCard(3)" title="הצג/הסתר בעמוד הבית">🏠</button>
+        <img id="card3Img" onclick="event.stopPropagation();openRecipeDetail('fixed',3)" src="https://res.cloudinary.com/dt3n4di9i/image/upload/v1774972079/IMG_9255_bxid0b.jpg" onerror="this.style.display='none'" />
         <div class="card-accent"></div>
       </div>
-      <div class="card-body">
+      <div class="card-body" onclick="event.stopPropagation();openRecipeDetail('fixed',3)" style="cursor:pointer">
         <div class="card-cat" id="card3Cat">סלט</div>
-        <div class="card-title" id="card3Title">סלט פומלה תאילנדי</div>
+        <div class="card-title" id="card3Title" onclick="event.stopPropagation();openRecipeDetail('fixed',3)">סלט פומלה תאילנדי</div>
         <div class="card-meta">
           <div class="card-stars">
             <div class="star-rating" id="stars3" data-card="3" data-rating="0"><span data-v="1">★</span><span data-v="2">★</span><span data-v="3">★</span><span data-v="4">★</span><span data-v="5">★</span></div>
@@ -756,12 +780,13 @@ body { font-family: 'Heebo', sans-serif; background: var(--cream); color: var(--
     <div class="card" id="card4" onclick="openRecipeDetail('fixed',4)" style="cursor:pointer">
       <div class="card-img">
         <button class="card-edit-btn" onclick="event.stopPropagation();openEditCard(4)" title="ערכי מתכון">✏️</button>
-        <img id="card4Img" src="https://res.cloudinary.com/dt3n4di9i/image/upload/v1774972069/IMG_3723_rqymqf.jpg" onerror="this.style.display='none'" />
+        <button class="card-home-btn" id="homeBtn4" onclick="event.stopPropagation();toggleHomeCard(4)" title="הצג/הסתר בעמוד הבית">🏠</button>
+        <img id="card4Img" onclick="event.stopPropagation();openRecipeDetail('fixed',4)" src="https://res.cloudinary.com/dt3n4di9i/image/upload/v1774972069/IMG_3723_rqymqf.jpg" onerror="this.style.display='none'" />
         <div class="card-accent"></div>
       </div>
-      <div class="card-body">
+      <div class="card-body" onclick="event.stopPropagation();openRecipeDetail('fixed',4)" style="cursor:pointer">
         <div class="card-cat" id="card4Cat">מרק</div>
-        <div class="card-title" id="card4Title">טום יאם שרימפס</div>
+        <div class="card-title" id="card4Title" onclick="event.stopPropagation();openRecipeDetail('fixed',4)">טום יאם שרימפס</div>
         <div class="card-meta">
           <div class="card-stars">
             <div class="star-rating" id="stars4" data-card="4" data-rating="0"><span data-v="1">★</span><span data-v="2">★</span><span data-v="3">★</span><span data-v="4">★</span><span data-v="5">★</span></div>
@@ -780,12 +805,13 @@ body { font-family: 'Heebo', sans-serif; background: var(--cream); color: var(--
     <div class="card" id="card5" onclick="openRecipeDetail('fixed',5)" style="cursor:pointer">
       <div class="card-img">
         <button class="card-edit-btn" onclick="event.stopPropagation();openEditCard(5)" title="ערכי מתכון">✏️</button>
-        <img id="card5Img" src="https://res.cloudinary.com/dt3n4di9i/image/upload/v1774972125/IMG_8243_irr0j4.jpg" onerror="this.style.display='none'" />
+        <button class="card-home-btn" id="homeBtn5" onclick="event.stopPropagation();toggleHomeCard(5)" title="הצג/הסתר בעמוד הבית">🏠</button>
+        <img id="card5Img" onclick="event.stopPropagation();openRecipeDetail('fixed',5)" src="https://res.cloudinary.com/dt3n4di9i/image/upload/v1774972125/IMG_8243_irr0j4.jpg" onerror="this.style.display='none'" />
         <div class="card-accent"></div>
       </div>
-      <div class="card-body">
+      <div class="card-body" onclick="event.stopPropagation();openRecipeDetail('fixed',5)" style="cursor:pointer">
         <div class="card-cat" id="card5Cat">דג</div>
-        <div class="card-title" id="card5Title">דג בנייר כסף עם אפונת שלג וקשיו</div>
+        <div class="card-title" id="card5Title" onclick="event.stopPropagation();openRecipeDetail('fixed',5)">דג בנייר כסף עם אפונת שלג וקשיו</div>
         <div class="card-meta">
           <div class="card-stars">
             <div class="star-rating" id="stars5" data-card="5" data-rating="0"><span data-v="1">★</span><span data-v="2">★</span><span data-v="3">★</span><span data-v="4">★</span><span data-v="5">★</span></div>
@@ -804,12 +830,13 @@ body { font-family: 'Heebo', sans-serif; background: var(--cream); color: var(--
     <div class="card" id="card6" onclick="openRecipeDetail('fixed',6)" style="cursor:pointer">
       <div class="card-img">
         <button class="card-edit-btn" onclick="event.stopPropagation();openEditCard(6)" title="ערכי מתכון">✏️</button>
-        <img id="card6Img" src="https://res.cloudinary.com/dt3n4di9i/image/upload/v1774972052/IMG_9063_zgziqt.jpg" onerror="this.style.display='none'" />
+        <button class="card-home-btn" id="homeBtn6" onclick="event.stopPropagation();toggleHomeCard(6)" title="הצג/הסתר בעמוד הבית">🏠</button>
+        <img id="card6Img" onclick="event.stopPropagation();openRecipeDetail('fixed',6)" src="https://res.cloudinary.com/dt3n4di9i/image/upload/v1774972052/IMG_9063_zgziqt.jpg" onerror="this.style.display='none'" />
         <div class="card-accent"></div>
       </div>
-      <div class="card-body">
+      <div class="card-body" onclick="event.stopPropagation();openRecipeDetail('fixed',6)" style="cursor:pointer">
         <div class="card-cat" id="card6Cat">דג נא</div>
-        <div class="card-title" id="card6Title">סביצ'ה דג</div>
+        <div class="card-title" id="card6Title" onclick="event.stopPropagation();openRecipeDetail('fixed',6)">סביצ'ה דג</div>
         <div class="card-meta">
           <div class="card-stars">
             <div class="star-rating" id="stars6" data-card="6" data-rating="0"><span data-v="1">★</span><span data-v="2">★</span><span data-v="3">★</span><span data-v="4">★</span><span data-v="5">★</span></div>
@@ -828,12 +855,13 @@ body { font-family: 'Heebo', sans-serif; background: var(--cream); color: var(--
     <div class="card" id="card7" onclick="openRecipeDetail('fixed',7)" style="cursor:pointer" style="display:none">
       <div class="card-img">
         <button class="card-edit-btn" onclick="event.stopPropagation();openEditCard(7)" title="ערכי מתכון">✏️</button>
-        <img id="card7Img" src="" style="display:none" />
+        <button class="card-home-btn" id="homeBtn7" onclick="event.stopPropagation();toggleHomeCard(7)" title="הצג/הסתר בעמוד הבית">🏠</button>
+        <img id="card7Img" onclick="event.stopPropagation();openRecipeDetail('fixed',7)" src="" style="display:none" />
         <div class="card-accent"></div>
       </div>
-      <div class="card-body">
+      <div class="card-body" onclick="event.stopPropagation();openRecipeDetail('fixed',7)" style="cursor:pointer">
         <div class="card-cat" id="card7Cat">קטגוריה</div>
-        <div class="card-title" id="card7Title">מתכון 7</div>
+        <div class="card-title" id="card7Title" onclick="event.stopPropagation();openRecipeDetail('fixed',7)">מתכון 7</div>
         <div class="card-meta">
           <div class="card-stars">
             <div class="star-rating" id="stars7" data-card="7" data-rating="0"><span data-v="1">★</span><span data-v="2">★</span><span data-v="3">★</span><span data-v="4">★</span><span data-v="5">★</span></div>
@@ -852,12 +880,13 @@ body { font-family: 'Heebo', sans-serif; background: var(--cream); color: var(--
     <div class="card" id="card8" onclick="openRecipeDetail('fixed',8)" style="cursor:pointer" style="display:none">
       <div class="card-img">
         <button class="card-edit-btn" onclick="event.stopPropagation();openEditCard(8)" title="ערכי מתכון">✏️</button>
-        <img id="card8Img" src="" style="display:none" />
+        <button class="card-home-btn" id="homeBtn8" onclick="event.stopPropagation();toggleHomeCard(8)" title="הצג/הסתר בעמוד הבית">🏠</button>
+        <img id="card8Img" onclick="event.stopPropagation();openRecipeDetail('fixed',8)" src="" style="display:none" />
         <div class="card-accent"></div>
       </div>
-      <div class="card-body">
+      <div class="card-body" onclick="event.stopPropagation();openRecipeDetail('fixed',8)" style="cursor:pointer">
         <div class="card-cat" id="card8Cat">קטגוריה</div>
-        <div class="card-title" id="card8Title">מתכון 8</div>
+        <div class="card-title" id="card8Title" onclick="event.stopPropagation();openRecipeDetail('fixed',8)">מתכון 8</div>
         <div class="card-meta">
           <div class="card-stars">
             <div class="star-rating" id="stars8" data-card="8" data-rating="0"><span data-v="1">★</span><span data-v="2">★</span><span data-v="3">★</span><span data-v="4">★</span><span data-v="5">★</span></div>
@@ -876,12 +905,13 @@ body { font-family: 'Heebo', sans-serif; background: var(--cream); color: var(--
     <div class="card" id="card9" onclick="openRecipeDetail('fixed',9)" style="cursor:pointer" style="display:none">
       <div class="card-img">
         <button class="card-edit-btn" onclick="event.stopPropagation();openEditCard(9)" title="ערכי מתכון">✏️</button>
-        <img id="card9Img" src="" style="display:none" />
+        <button class="card-home-btn" id="homeBtn9" onclick="event.stopPropagation();toggleHomeCard(9)" title="הצג/הסתר בעמוד הבית">🏠</button>
+        <img id="card9Img" onclick="event.stopPropagation();openRecipeDetail('fixed',9)" src="" style="display:none" />
         <div class="card-accent"></div>
       </div>
-      <div class="card-body">
+      <div class="card-body" onclick="event.stopPropagation();openRecipeDetail('fixed',9)" style="cursor:pointer">
         <div class="card-cat" id="card9Cat">קטגוריה</div>
-        <div class="card-title" id="card9Title">מתכון 9</div>
+        <div class="card-title" id="card9Title" onclick="event.stopPropagation();openRecipeDetail('fixed',9)">מתכון 9</div>
         <div class="card-meta">
           <div class="card-stars">
             <div class="star-rating" id="stars9" data-card="9" data-rating="0"><span data-v="1">★</span><span data-v="2">★</span><span data-v="3">★</span><span data-v="4">★</span><span data-v="5">★</span></div>
@@ -2090,7 +2120,7 @@ function initStarRatings(){
       star.addEventListener('mouseleave',()=>{
         row.querySelectorAll('span').forEach(s=> s.classList.remove('hover'));
       });
-      star.addEventListener('click', async ()=>{
+      star.addEventListener('click', async (e)=>{ e.stopPropagation();
         const key = `card${n}`;
         if(!srRatings[key]) srRatings[key]={total:0,count:0};
         srRatings[key].total += v;
@@ -2418,11 +2448,33 @@ async function saveHomeSlots(){
 }
 
 function applyHomeSlots(){
-  // הצג רק הכרטיסים שב-homeSlots
   for(let n=1;n<=9;n++){
     const el=document.getElementById(`card${n}`);
-    if(el) el.style.display = homeSlots.includes(n) ? 'flex' : 'none';
+    const btn=document.getElementById(`homeBtn${n}`);
+    const isOn = homeSlots.includes(n);
+    if(el) el.style.display = isOn ? 'flex' : 'none';
+    if(btn) btn.classList.toggle('on', isOn);
   }
+}
+
+function toggleHomeCard(n){
+  const idx = homeSlots.indexOf(n);
+  if(idx > -1){
+    // הסר מעמוד הבית
+    homeSlots.splice(idx, 1);
+    toast(`כרטיס ${n} הוסר מעמוד הבית`);
+  } else {
+    // הוסף — מקסימום 6
+    if(homeSlots.length >= 6){
+      toast('❗ מקסימום 6 מתכונים בעמוד הבית');
+      return;
+    }
+    homeSlots.push(n);
+    toast(`כרטיס ${n} נוסף לעמוד הבית`);
+  }
+  homeSlots.sort((a,b)=>a-b);
+  applyHomeSlots();
+  saveHomeSlots();
 }
 
 let allRecipesData = [];
