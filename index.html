@@ -1646,7 +1646,8 @@ async function forceSupabaseLoad(){
 
 // ── בדיקת שמירה/טעינה ──
 let dataFullyLoaded = false;
-let isSaving = false; // מנעול — מונע שמירות כפולות
+let isSaving = false;
+let _loadedCards = []; // נתוני כרטיסים שנטענו (כולל מצרכים)
 
 async function testSaveLoad(){
   const ts = Date.now().toString();
@@ -2528,6 +2529,7 @@ async function loadPageData() {
 
   // שחזר כרטיסים + תוכן מתכונים
   if(data.cards) {
+    _loadedCards = data.cards; // שמור לשימוש ב-openRecipeDetail
     data.cards.forEach((c, i) => {
       const n = i + 1;
       const cardEl = document.getElementById(`card${n}`);
@@ -3025,41 +3027,62 @@ function openRecipeDetail(type, idx){
     title = document.getElementById(`card${n}Title`)?.textContent || '';
     author = document.getElementById(`card${n}Who`)?.textContent || '';
     
-    // טען מ-localStorage מיד (סינכרוני)
-    const extra = JSON.parse(localStorage.getItem(`card${n}_extra`) || '{}');
-    ingredients = extra.ingredients || '';
-    steps = extra.steps || '';
-    prepTime = extra.prepTime || '';
-    servings = extra.servings || '';
-    url = extra.url || '';
-    photos = extra.photos || [];
+    // מקור 1: _loadedCards (נטען מהענן/local בטעינת הדף)
+    const card = _loadedCards[n-1];
+    if(card && (card.ingredients || card.steps)){
+      ingredients = card.ingredients || '';
+      steps = card.steps || '';
+      prepTime = card.prepTime || '';
+      servings = card.servings || '';
+      url = card.url || '';
+      photos = card.photos || [];
+    }
     
-    // אם ריק — נסה ענן ברקע עם חיווי טעינה
+    // מקור 2: localStorage (card_extra)
     if(!ingredients && !steps){
-      document.getElementById('rdIngredientsSection').style.display='block';
-      document.getElementById('rdIngredients').innerHTML='<span style="color:var(--gold);font-weight:bold">⏳ טוען מתכון...</span>';
-      
-      cloudLoad(`card${n}_extra`).then(cloudJson => {
-        if(!cloudJson){
-          document.getElementById('rdIngredients').innerHTML='<span style="color:#aaa">המתכון עדיין לא עודכן. לחצי ✏️ ערכי</span>';
-          return;
-        }
+      try{
+        const extra = JSON.parse(localStorage.getItem(`card${n}_extra`) || '{}');
+        ingredients = extra.ingredients || '';
+        steps = extra.steps || '';
+        prepTime = extra.prepTime || '';
+        servings = extra.servings || '';
+        url = extra.url || '';
+        photos = extra.photos || [];
+      }catch(e){}
+    }
+    
+    // מקור 3: ענן (אם עדיין ריק — טען ברקע)
+    if(!ingredients && !steps){
+      // נסה קודם page_content מהענן
+      cloudLoad('page_content').then(pcJson => {
+        if(!pcJson) return cloudLoad(`card${n}_extra`);
         try{
-          const ce = JSON.parse(cloudJson);
-          try{ localStorage.setItem(`card${n}_extra`, cloudJson); }catch(e){}
-          if(document.getElementById('recipeDetailOverlay').classList.contains('open') && currentDetailIdx === n && currentDetailType === 'fixed'){
+          const pc = JSON.parse(pcJson);
+          const c = pc.cards?.[n-1];
+          if(c && (c.ingredients || c.steps)){
+            return JSON.stringify(c);
+          }
+        }catch(e){}
+        return cloudLoad(`card${n}_extra`);
+      }).then(extraJson => {
+        if(!extraJson) return;
+        try{
+          const ce = typeof extraJson === 'string' ? JSON.parse(extraJson) : extraJson;
+          if(!ce.ingredients && !ce.steps) return;
+          try{ localStorage.setItem(`card${n}_extra`, JSON.stringify(ce)); }catch(e){}
+          // עדכן _loadedCards
+          if(_loadedCards[n-1]) Object.assign(_loadedCards[n-1], ce);
+          // עדכן מודל אם פתוח
+          if(document.getElementById('recipeDetailOverlay')?.classList.contains('open') && currentDetailIdx===n && currentDetailType==='fixed'){
             if(ce.ingredients){ document.getElementById('rdIngredientsSection').style.display='block'; document.getElementById('rdIngredients').textContent=ce.ingredients; }
-            else document.getElementById('rdIngredients').innerHTML='<span style="color:#aaa">אין מצרכים עדיין</span>';
             if(ce.steps){ document.getElementById('rdStepsSection').style.display='block'; document.getElementById('rdSteps').textContent=ce.steps; }
             if(ce.prepTime) document.getElementById('rdPrepTime').textContent='⏱️ '+ce.prepTime;
             if(ce.servings) document.getElementById('rdServings').textContent='🍽️ '+ce.servings;
             if(ce.url){ document.getElementById('rdUrlSection').style.display='block'; document.getElementById('rdUrl').href=ce.url; }
-            if(ce.photos && ce.photos.length) document.getElementById('rdPhotos').innerHTML=ce.photos.map(p=>`<img src="${p}" />`).join('');
+            if(ce.photos?.length) document.getElementById('rdPhotos').innerHTML=ce.photos.map(p=>`<img src="${p}" />`).join('');
           }
         }catch(e){}
-      }).catch(()=>{
-        document.getElementById('rdIngredients').innerHTML='<span style="color:#aaa">לא הצלחנו לטעון. בדקי חיבור אינטרנט</span>';
-      });
+      }).catch(()=>{});
     }
   } else {
     const r = srRecipes[idx];
@@ -3337,6 +3360,9 @@ async function saveEditRecipe(){
     const extraKey = `card${n}_extra`;
     try{ localStorage.setItem(extraKey, JSON.stringify(extraData)); }catch(e){}
     await cloudSave(extraKey, JSON.stringify(extraData));
+    // עדכן cache גלובלי
+    if(_loadedCards[n-1]) Object.assign(_loadedCards[n-1], extraData);
+    else _loadedCards[n-1] = extraData;
     
     dataFullyLoaded = true;
     markChanged();
