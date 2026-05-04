@@ -307,6 +307,14 @@ body { font-family: 'Heebo', sans-serif; background: var(--cream); color: var(--
 .rd-photos img:hover { transform: scale(1.05); box-shadow: 0 4px 12px rgba(0,0,0,.2); }
 .rd-link { display: inline-flex; align-items: center; gap: 6px; color: var(--gold); text-decoration: none; font-size: 13px; border: 1px solid var(--gold); padding: 8px 16px; border-radius: 20px; transition: .2s; }
 .rd-link:hover { background: var(--gold); color: #fff; }
+.rd-star { font-size: 32px; cursor: pointer; transition: .15s; user-select: none; }
+.rd-star:hover { transform: scale(1.2); }
+.rd-star.on { color: #f5a623; }
+.rd-au-btn { border: 1.5px solid #E8D9C8; border-radius: 50px; padding: 5px 14px; background: none; cursor: pointer; font-size: 12px; font-family: 'Heebo', sans-serif; transition: .2s; }
+.rd-au-btn.sel { background: var(--gold); color: #fff; border-color: var(--gold); }
+.rd-rating-item { display: flex; align-items: center; gap: 8px; padding: 6px 0; border-bottom: 1px solid #f0ebe4; font-size: 13px; }
+.rd-rating-item:last-child { border-bottom: none; }
+.rd-rating-stars { color: #f5a623; font-size: 15px; }
 
 .card-edit-btn {
   position: absolute;
@@ -1040,9 +1048,34 @@ body { font-family: 'Heebo', sans-serif; background: var(--cream); color: var(--
         <h3>🔗 מתכון מקורי</h3>
         <a class="rd-link" id="rdUrl" href="#" target="_blank">פתחי את המתכון המקורי →</a>
       </div>
-      <div class="rd-section" id="rdPhotosSection" style="display:none">
+      <div class="rd-section" id="rdPhotosSection">
         <h3>📸 ניסינו את זה!</h3>
         <div class="rd-photos" id="rdPhotos"></div>
+        <label style="display:inline-flex;align-items:center;gap:6px;margin-top:10px;padding:8px 16px;background:var(--gold);color:#fff;border-radius:20px;font-size:13px;cursor:pointer;font-family:'Heebo',sans-serif">
+          <input type="file" accept="image/*" onchange="addPhotoToRecipe(event)" style="display:none" multiple />
+          📷 הוסיפי תמונות
+        </label>
+      </div>
+      
+      <div class="rd-section" id="rdRatingsSection">
+        <h3>⭐ דירוגים</h3>
+        <div id="rdRatingsList" style="margin-bottom:14px"></div>
+        <div style="background:#FFFBF5;border:1px solid #E8D9C8;border-radius:12px;padding:14px">
+          <div style="font-size:13px;font-weight:600;margin-bottom:8px;color:var(--dark)">דרגי את המתכון:</div>
+          <div id="rdStarsRow" style="display:flex;gap:4px;justify-content:center;margin-bottom:10px">
+            <span class="rd-star" data-v="1" onclick="setRdStar(1)">☆</span>
+            <span class="rd-star" data-v="2" onclick="setRdStar(2)">☆</span>
+            <span class="rd-star" data-v="3" onclick="setRdStar(3)">☆</span>
+            <span class="rd-star" data-v="4" onclick="setRdStar(4)">☆</span>
+            <span class="rd-star" data-v="5" onclick="setRdStar(5)">☆</span>
+          </div>
+          <div style="display:flex;gap:6px;justify-content:center;margin-bottom:8px">
+            <button class="rd-au-btn" onclick="pickRdAuthor(this,'סיון')">💃 סיון</button>
+            <button class="rd-au-btn" onclick="pickRdAuthor(this,'רוי')">🕺 רוי</button>
+            <button class="rd-au-btn" onclick="pickRdAuthor(this,'ביחד')" style="border-style:dashed">💑 ביחד</button>
+          </div>
+          <button onclick="saveRdRating()" style="width:100%;background:var(--gold);color:#fff;border:none;border-radius:10px;padding:10px;font-size:14px;font-weight:700;cursor:pointer;font-family:'Heebo',sans-serif">⭐ שמרי דירוג</button>
+        </div>
       </div>
     </div>
   </div>
@@ -3076,14 +3109,148 @@ function renderRecipeDetail(img, cat, title, author, ingredients, steps, prepTim
   else urlS.style.display = 'none';
   
   const phS = document.getElementById('rdPhotosSection');
-  if(photos.length){
-    phS.style.display = 'block';
-    document.getElementById('rdPhotos').innerHTML = photos.map(p => `<img src="${p}" onclick="openLightbox(-1);document.querySelector('#lbContent').innerHTML='<img src=\\'${p}\\' style=\\'max-width:90vw;max-height:85vh;object-fit:contain;border-radius:8px\\' />';document.getElementById('galleryLightbox').classList.add('open');document.body.style.overflow='hidden'" />`).join('');
-  } else phS.style.display = 'none';
+  const photosHtml = photos.map(p => `<img src="${p}" onclick="document.querySelector('#lbContent').innerHTML='<img src=\\'${p}\\' style=\\'max-width:90vw;max-height:85vh;object-fit:contain;border-radius:8px\\' />';document.getElementById('galleryLightbox').classList.add('open');document.body.style.overflow='hidden'" />`).join('');
+  document.getElementById('rdPhotos').innerHTML = photos.length ? photosHtml : '<div style="color:#bbb;font-size:12px">עדיין לא העלינו תמונות</div>';
+  
+  // רענן דירוגים
+  renderRdRatings(currentDetailType, currentDetailIdx);
+  // אפס טופס דירוג
+  rdSelectedStars = 0; rdSelectedAuthor = '';
+  document.querySelectorAll('.rd-star').forEach(s => { s.textContent = '☆'; s.classList.remove('on'); });
+  document.querySelectorAll('.rd-au-btn').forEach(b => b.classList.remove('sel'));
 }
 
 function closeRecipeDetail(){
   document.getElementById('recipeDetailOverlay').classList.remove('open');
+}
+
+// ── דירוג + תמונות בתצוגת מתכון ──
+let rdSelectedStars = 0;
+let rdSelectedAuthor = '';
+
+function setRdStar(v){
+  rdSelectedStars = v;
+  document.querySelectorAll('.rd-star').forEach(s => {
+    s.textContent = parseInt(s.dataset.v) <= v ? '⭐' : '☆';
+    s.classList.toggle('on', parseInt(s.dataset.v) <= v);
+  });
+}
+
+function pickRdAuthor(btn, v){
+  rdSelectedAuthor = v;
+  document.querySelectorAll('.rd-au-btn').forEach(b => b.classList.remove('sel'));
+  btn.classList.add('sel');
+}
+
+async function saveRdRating(){
+  if(!rdSelectedStars){ toast('❗ בחרי כמה כוכבים'); return; }
+  if(!rdSelectedAuthor){ toast('❗ בחרי מי מדרגת'); return; }
+  
+  const type = currentDetailType;
+  const idx = currentDetailIdx;
+  
+  if(type === 'fixed'){
+    const key = `card${idx}`;
+    try{ const fresh = await cloudLoad('sr_ratings'); if(fresh) srRatings = JSON.parse(fresh); }catch(e){}
+    if(!srRatings[key]) srRatings[key] = {total:0, count:0, list:[]};
+    srRatings[key].total += rdSelectedStars;
+    srRatings[key].count += 1;
+    if(!srRatings[key].list) srRatings[key].list = [];
+    srRatings[key].list.push({stars: rdSelectedStars, author: rdSelectedAuthor, date: new Date().toLocaleDateString('he-IL')});
+    renderRatings();
+    await saveRatings();
+  } else {
+    const r = srRecipes[idx];
+    if(!r) return;
+    if(!r.ratings) r.ratings = [];
+    r.ratings.push({stars: rdSelectedStars, author: rdSelectedAuthor, date: new Date().toLocaleDateString('he-IL')});
+    await saveSRRecipes();
+  }
+  
+  toast('⭐ תודה על הדירוג!');
+  rdSelectedStars = 0;
+  rdSelectedAuthor = '';
+  // רענן תצוגה
+  openRecipeDetail(type, idx);
+}
+
+function renderRdRatings(type, idx){
+  const el = document.getElementById('rdRatingsList');
+  let ratings = [];
+  
+  if(type === 'fixed'){
+    const key = `card${idx}`;
+    const data = srRatings[key];
+    if(data?.list) ratings = data.list;
+  } else {
+    const r = srRecipes[idx];
+    if(r?.ratings) ratings = r.ratings;
+  }
+  
+  if(!ratings.length){
+    el.innerHTML = '<div style="color:#bbb;font-size:12px;text-align:center">עדיין אין דירוגים</div>';
+    return;
+  }
+  
+  el.innerHTML = ratings.map(r => {
+    let stars = '';
+    for(let i=1;i<=5;i++) stars += i<=r.stars ? '⭐' : '☆';
+    return `<div class="rd-rating-item">
+      <span class="rd-rating-stars">${stars}</span>
+      <span>${r.author || ''}</span>
+      <span style="color:#ccc;font-size:11px;margin-right:auto">${r.date || ''}</span>
+    </div>`;
+  }).join('');
+}
+
+async function addPhotoToRecipe(e){
+  const files = Array.from(e.target.files);
+  if(!files.length) return;
+  
+  const type = currentDetailType;
+  const idx = currentDetailIdx;
+  
+  for(const file of files){
+    if(!file.type.startsWith('image/')) continue;
+    const dataUrl = await new Promise(res => {
+      const reader = new FileReader();
+      reader.onload = ev => {
+        // דחוס
+        const img = new Image();
+        img.onload = () => {
+          const c = document.createElement('canvas');
+          let w=img.width, h=img.height;
+          const max=400; if(w>max||h>max){const r=Math.min(max/w,max/h);w*=r;h*=r;}
+          c.width=w; c.height=h; c.getContext('2d').drawImage(img,0,0,w,h);
+          res(c.toDataURL('image/jpeg',0.5));
+        };
+        img.src = ev.target.result;
+      };
+      reader.readAsDataURL(file);
+    });
+    
+    if(type === 'fixed'){
+      const extraKey = `card${idx}_extra`;
+      let extra = {};
+      try{ extra = JSON.parse(localStorage.getItem(extraKey) || '{}'); }catch(e){}
+      if(!extra.photos) extra.photos = [];
+      extra.photos.push(dataUrl);
+      try{ localStorage.setItem(extraKey, JSON.stringify(extra)); }catch(e){}
+      await cloudSave(extraKey, JSON.stringify(extra));
+      // עדכן גם ב-page_content
+      dataFullyLoaded = true;
+      await savePageData();
+    } else {
+      const r = srRecipes[idx];
+      if(!r.photos) r.photos = [];
+      r.photos.push(dataUrl);
+      await saveSRRecipes();
+    }
+  }
+  
+  toast(`📸 ${files.length} תמונות נוספו!`);
+  e.target.value = '';
+  openRecipeDetail(type, idx); // רענן תצוגה
 }
 
 function editFromDetail(){
