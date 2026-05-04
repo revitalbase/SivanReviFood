@@ -218,6 +218,30 @@ body { font-family: 'Heebo', sans-serif; background: var(--cream); color: var(--
 .footer-logo span { color: var(--gold); font-style: italic; }
 .footer-heart { font-size: 12px; color: var(--gold); }
 
+/* TEXT EDITOR MODAL */
+.edit-text-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,.72);
+  backdrop-filter: blur(7px);
+  z-index: 4600;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+}
+.edit-text-overlay.open { display: flex; }
+.edit-text-modal {
+  background: #fff;
+  border-radius: 18px;
+  width: 100%;
+  max-width: 520px;
+  max-height: 92vh;
+  overflow-y: auto;
+  box-shadow: 0 28px 80px rgba(0,0,0,.4);
+}
+.edit-text-modal .modal-hdr { border-radius: 18px 18px 0 0; }
+
 /* Debug status bar */
 #debugBar {
   position: fixed;
@@ -1131,6 +1155,70 @@ body { font-family: 'Heebo', sans-serif; background: var(--cream); color: var(--
 <div class="footer-bar">
   <div class="footer-logo">Sivan <span>&</span> Revi — המטבח שלנו</div>
   <div class="footer-heart">עשוי באהבה ♥</div>
+  <div style="text-align:center;padding:12px 0">
+    <button onclick="openTextEditor()" style="background:none;border:1px solid var(--border);color:var(--gold);padding:8px 20px;border-radius:20px;font-family:'Heebo',sans-serif;font-size:12px;cursor:pointer;transition:.2s" onmouseover="this.style.background='var(--gold)';this.style.color='#fff'" onmouseout="this.style.background='none';this.style.color='var(--gold)'">✏️ ערוך טקסטים</button>
+  </div>
+</div>
+
+<!-- TEXT EDITOR MODAL -->
+<div class="edit-text-overlay" id="editTextOverlay">
+  <div class="edit-text-modal">
+    <div class="modal-hdr" style="position:relative">
+      <button class="modal-x" onclick="closeTextEditor()">✕</button>
+      <h2>✏️ עריכת טקסטים</h2>
+      <p>עמוד הבית — כותרות ותיאורים</p>
+    </div>
+    <div class="modal-body" style="padding:20px 24px">
+      
+      <div style="font-size:11px;letter-spacing:1.5px;color:var(--gold);text-transform:uppercase;margin:16px 0 8px;font-weight:600">🎬 אזור הירו (למעלה)</div>
+      <div class="fg">
+        <label class="fl">כותרת אנגלית</label>
+        <textarea class="ft" id="te-heroTitle" rows="2" style="font-size:13px"></textarea>
+      </div>
+      <div class="fg">
+        <label class="fl">תגית קטנה</label>
+        <input class="fi" id="te-heroTag" />
+      </div>
+      <div class="fg">
+        <label class="fl">תיאור</label>
+        <input class="fi" id="te-heroSub" />
+      </div>
+      <div class="fg">
+        <label class="fl">חתימה</label>
+        <input class="fi" id="te-heroSig" />
+      </div>
+      
+      <div style="font-size:11px;letter-spacing:1.5px;color:var(--gold);text-transform:uppercase;margin:20px 0 8px;font-weight:600">🍽️ מנת השבוע</div>
+      <div class="fg">
+        <label class="fl">תגית</label>
+        <input class="fi" id="te-featTag" />
+      </div>
+      <div class="fg">
+        <label class="fl">כותרת</label>
+        <textarea class="ft" id="te-featTitle" rows="2" style="font-size:13px"></textarea>
+      </div>
+      <div class="fg">
+        <label class="fl">תיאור</label>
+        <textarea class="ft" id="te-featText" rows="2" style="font-size:13px"></textarea>
+      </div>
+      
+      <div style="font-size:11px;letter-spacing:1.5px;color:var(--gold);text-transform:uppercase;margin:20px 0 8px;font-weight:600">💛 רצועת אהבה</div>
+      <div class="fg">
+        <label class="fl">משפט 1</label>
+        <input class="fi" id="te-love1" />
+      </div>
+      <div class="fg">
+        <label class="fl">משפט 2</label>
+        <input class="fi" id="te-love2" />
+      </div>
+      <div class="fg">
+        <label class="fl">משפט 3</label>
+        <input class="fi" id="te-love3" />
+      </div>
+      
+      <button class="btn-save-modal" onclick="saveTextEdits()">✅ שמרי שינויים</button>
+    </div>
+  </div>
 </div>
 
 <!-- QUICK ADD MODAL -->
@@ -2305,6 +2393,7 @@ function collectPageData() {
   return {
     hero: {
       tag:    g('heroTag'),
+      title:  document.getElementById('heroTitle') ? document.getElementById('heroTitle').innerHTML : '',
       sig:    g('heroSig'),
       sub:    g('heroSub'),
       imgUrl: document.getElementById('heroImg') ? (document.getElementById('heroImg').style.backgroundImage.replace(/url\(['"]?/,'').replace(/['"]?\)/,'')) : '',
@@ -2409,6 +2498,7 @@ async function loadPageData() {
     if(h.videoUrl) setHeroMedia(h.videoUrl, 'video');
     else if(h.imgUrl && h.imgUrl !== 'HERO_IMAGE_URL') setHeroMedia(h.imgUrl, 'image');
     if(h.tag) document.getElementById('heroTag').textContent = h.tag;
+    if(h.title) document.getElementById('heroTitle').innerHTML = h.title;
     if(h.sig) document.getElementById('heroSig').textContent = h.sig;
     if(h.sub) document.getElementById('heroSub').textContent = h.sub;
   }
@@ -2813,6 +2903,59 @@ function handleERFile(e){
     toast('✅ תמונה נטענה!');
   };
   reader.readAsDataURL(file);
+}
+
+// ── עריכת טקסטים ──
+function openTextEditor(){
+  document.getElementById('te-heroTitle').value = document.getElementById('heroTitle')?.innerText || '';
+  document.getElementById('te-heroTag').value = document.getElementById('heroTag')?.textContent || '';
+  document.getElementById('te-heroSub').value = document.getElementById('heroSub')?.textContent || '';
+  document.getElementById('te-heroSig').value = document.getElementById('heroSig')?.textContent || '';
+  document.getElementById('te-featTag').value = document.getElementById('featTag')?.textContent || '';
+  document.getElementById('te-featTitle').value = document.getElementById('featTitle')?.innerText || '';
+  document.getElementById('te-featText').value = document.getElementById('featText')?.textContent || '';
+  document.getElementById('te-love1').value = document.getElementById('love1')?.textContent || '';
+  document.getElementById('te-love2').value = document.getElementById('love2')?.textContent || '';
+  document.getElementById('te-love3').value = document.getElementById('love3')?.textContent || '';
+  document.getElementById('editTextOverlay').classList.add('open');
+}
+
+function closeTextEditor(){
+  document.getElementById('editTextOverlay').classList.remove('open');
+}
+
+async function saveTextEdits(){
+  // Hero
+  const heroTitle = document.getElementById('te-heroTitle').value.trim();
+  if(heroTitle){
+    const el = document.getElementById('heroTitle');
+    // שמור em tags
+    el.innerHTML = heroTitle.replace(/\*(.*?)\*/g, '<em>$1</em>').replace(/\n/g, '<br>');
+  }
+  document.getElementById('heroTag').textContent = document.getElementById('te-heroTag').value.trim();
+  document.getElementById('heroSub').textContent = document.getElementById('te-heroSub').value.trim();
+  document.getElementById('heroSig').textContent = document.getElementById('te-heroSig').value.trim();
+  
+  // Featured
+  document.getElementById('featTag').textContent = document.getElementById('te-featTag').value.trim();
+  const featTitle = document.getElementById('te-featTitle').value.trim();
+  if(featTitle){
+    document.getElementById('featTitle').innerHTML = featTitle.replace(/\*(.*?)\*/g, '<em>$1</em>').replace(/\n/g, '<br>');
+  }
+  document.getElementById('featText').textContent = document.getElementById('te-featText').value.trim();
+  
+  // Love strip
+  document.getElementById('love1').textContent = document.getElementById('te-love1').value.trim();
+  document.getElementById('love2').textContent = document.getElementById('te-love2').value.trim();
+  document.getElementById('love3').textContent = document.getElementById('te-love3').value.trim();
+  
+  // שמור
+  dataFullyLoaded = true;
+  markChanged();
+  await savePageData();
+  
+  closeTextEditor();
+  toast('✅ טקסטים עודכנו ונשמרו!');
 }
 
 // ── תצוגת מתכון מלא ──
