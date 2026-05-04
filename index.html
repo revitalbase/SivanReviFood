@@ -2678,7 +2678,7 @@ function exportHTML() {
 let erSelectedAuthor = '';
 let erFileData = '';
 
-function openEditCard(n){
+async function openEditCard(n){
   
   erFileData = '';
   document.getElementById('erType').value = 'fixed';
@@ -2713,7 +2713,16 @@ function openEditCard(n){
   
   // Load saved extra data for this card
   const extraKey = `card${n}_extra`;
-  const extra = JSON.parse(localStorage.getItem(extraKey) || '{}');
+  let extra = JSON.parse(localStorage.getItem(extraKey) || '{}');
+  if(!extra.ingredients && !extra.steps){
+    try{
+      const cloudJson = await cloudLoad(extraKey);
+      if(cloudJson){
+        extra = JSON.parse(cloudJson);
+        localStorage.setItem(extraKey, cloudJson);
+      }
+    }catch(e){}
+  }
   document.getElementById('erIngredients').value = extra.ingredients || '';
   document.getElementById('erSteps').value = extra.steps || '';
   document.getElementById('erPrepTime').value = extra.prepTime || '';
@@ -2810,7 +2819,7 @@ function handleERFile(e){
 let currentDetailType = '';
 let currentDetailIdx = 0;
 
-function openRecipeDetail(type, idx){
+async function openRecipeDetail(type, idx){
   currentDetailType = type;
   currentDetailIdx = idx;
   
@@ -2822,7 +2831,18 @@ function openRecipeDetail(type, idx){
     cat = document.getElementById(`card${n}Cat`)?.textContent || '';
     title = document.getElementById(`card${n}Title`)?.textContent || '';
     author = document.getElementById(`card${n}Who`)?.textContent || '';
-    const extra = JSON.parse(localStorage.getItem(`card${n}_extra`) || '{}');
+    
+    // טען extras — localStorage ואם ריק, מהענן
+    let extra = JSON.parse(localStorage.getItem(`card${n}_extra`) || '{}');
+    if(!extra.ingredients && !extra.steps){
+      try{
+        const cloudJson = await cloudLoad(`card${n}_extra`);
+        if(cloudJson){
+          extra = JSON.parse(cloudJson);
+          localStorage.setItem(`card${n}_extra`, cloudJson);
+        }
+      }catch(e){}
+    }
     ingredients = extra.ingredients || '';
     steps = extra.steps || '';
     prepTime = extra.prepTime || '';
