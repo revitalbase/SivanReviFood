@@ -1514,7 +1514,7 @@ body { font-family: 'Heebo', sans-serif; background: var(--cream); color: var(--
 async function cloudLoad(id){
   const timeout = ms => new Promise((_,rej) => setTimeout(()=>rej(new Error('timeout')), ms));
   
-  // נסה API שרתי (עם timeout 5 שניות)
+  // נסה API שרתי
   try{
     const r = await Promise.race([
       fetch('/api/load?id=' + encodeURIComponent(id)),
@@ -1526,6 +1526,20 @@ async function cloudLoad(id){
     }
   }catch(e){}
   
+  // fallback: Supabase REST ישיר
+  try{
+    const cfg = await fetch('/api/config').then(r=>r.json());
+    if(cfg.supabaseUrl){
+      const r = await Promise.race([
+        fetch(`${cfg.supabaseUrl}/rest/v1/recipes?id=eq.${encodeURIComponent(id)}&select=data`, {
+          headers: {'apikey': cfg.supabaseKey, 'Authorization': 'Bearer ' + cfg.supabaseKey}
+        }),
+        timeout(5000)
+      ]);
+      const rows = await r.json();
+      if(rows?.[0]?.data) return rows[0].data;
+    }
+  }catch(e){}
   return null;
 }
 
@@ -1545,6 +1559,26 @@ async function cloudSave(id, data){
     if(r.ok){ const j = await r.json(); if(j.success) return true; }
   }catch(e){}
   
+  // fallback: Supabase REST ישיר
+  try{
+    const cfg = await fetch('/api/config').then(r=>r.json());
+    if(cfg.supabaseUrl){
+      const r = await Promise.race([
+        fetch(`${cfg.supabaseUrl}/rest/v1/recipes?on_conflict=id`, {
+          method:'POST',
+          headers: {
+            'Content-Type':'application/json',
+            'apikey': cfg.supabaseKey,
+            'Authorization': 'Bearer ' + cfg.supabaseKey,
+            'Prefer': 'resolution=merge-duplicates'
+          },
+          body: JSON.stringify({id, data, updated_at: new Date().toISOString()})
+        }),
+        timeout(8000)
+      ]);
+      return r.ok;
+    }
+  }catch(e){}
   return false;
 }
 
