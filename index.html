@@ -1537,8 +1537,8 @@ body { font-family: 'Heebo', sans-serif; background: var(--cream); color: var(--
   <span id="dbData">⏳</span>
   <span id="dbSave">—</span>
   <button onclick="testSaveLoad()" style="background:var(--gold);border:none;color:#fff;padding:3px 8px;border-radius:4px;font-size:10px;cursor:pointer">🧪 בדיקה</button>
-  <button onclick="clearCorruptData()" style="background:#e74c3c;border:none;color:#fff;padding:3px 8px;border-radius:4px;font-size:10px;cursor:pointer">🗑️ נקה local</button>
-  <button onclick="forceSupabaseLoad()" style="background:#3498db;border:none;color:#fff;padding:3px 8px;border-radius:4px;font-size:10px;cursor:pointer">☁️ טען מ-Supabase</button>
+  <button onclick="pushAllToCloud()" style="background:#27ae60;border:none;color:#fff;padding:3px 8px;border-radius:4px;font-size:10px;cursor:pointer">🚀 דחוף לענן</button>
+  <button onclick="clearCorruptData()" style="background:#e74c3c;border:none;color:#fff;padding:3px 8px;border-radius:4px;font-size:10px;cursor:pointer">🗑️ נקה</button>
   <button onclick="this.parentElement.remove()" style="background:none;border:none;color:#666;cursor:pointer;font-size:10px">✕</button>
 </div>
 <script>
@@ -1642,6 +1642,48 @@ async function forceSupabaseLoad(){
   } catch(e) {
     toast('❌ שגיאה: ' + e.message);
   }
+}
+
+// ── דחוף הכל לענן (מהמחשב) ──
+async function pushAllToCloud(){
+  if(!confirm('לדחוף את כל הנתונים מהמחשב הזה לענן?\nמכשירים אחרים יראו את הנתונים האלה.')) return;
+  toast('☁️ דוחף לענן...');
+  let ok=0, fail=0;
+  
+  // 1. page_content (כולל extras)
+  dataFullyLoaded = true;
+  const data = collectPageData();
+  if(await cloudSave('page_content', JSON.stringify(data))) ok++; else fail++;
+  
+  // 2. מתכונים דינמיים
+  if(srRecipes.length){
+    if(await cloudSave('shared', JSON.stringify(srRecipes))) ok++; else fail++;
+  }
+  
+  // 3. דירוגים
+  if(Object.keys(srRatings).length){
+    if(await cloudSave('sr_ratings', JSON.stringify(srRatings))) ok++; else fail++;
+  }
+  
+  // 4. tried
+  if(Object.keys(srTried).length){
+    if(await cloudSave('sr_tried', JSON.stringify(srTried))) ok++; else fail++;
+  }
+  
+  // 5. homeSlots
+  if(await cloudSave('sr_home_slots', JSON.stringify(homeSlots))) ok++; else fail++;
+  
+  // 6. card extras בנפרד
+  for(let n=1;n<=9;n++){
+    try{
+      const ex = localStorage.getItem(`card${n}_extra`);
+      if(ex && ex.length > 5){
+        if(await cloudSave(`card${n}_extra`, ex)) ok++; else fail++;
+      }
+    }catch(e){}
+  }
+  
+  toast(fail===0 ? `✅ ${ok} פריטים נדחפו לענן!` : `⚠️ ${ok} הצליחו, ${fail} נכשלו`);
 }
 
 // ── בדיקת שמירה/טעינה ──
@@ -2529,23 +2571,27 @@ async function loadPageData() {
 
   // שחזר כרטיסים + תוכן מתכונים
   if(data.cards) {
-    _loadedCards = data.cards; // שמור לשימוש ב-openRecipeDetail
+    _loadedCards = data.cards;
     data.cards.forEach((c, i) => {
       const n = i + 1;
       const cardEl = document.getElementById(`card${n}`);
       if(!cardEl) return;
+      
+      // תמונה — רק אם הענן מכיל תמונה ארוכה יותר ממה שכבר ב-HTML
       const img = document.getElementById(`card${n}Img`);
-      if(img && c.img && c.img !== '' && !c.img.endsWith('undefined')){
+      if(img && c.img && c.img.length > 20 && c.img.length > (img.src||'').length * 0.8){
         img.src = c.img; img.style.display = 'block';
       }
-      const cat = document.getElementById(`card${n}Cat`);
-      if(cat && c.cat) cat.textContent = c.cat;
-      const title = document.getElementById(`card${n}Title`);
-      if(title && c.title) title.textContent = c.title;
-      const who = document.getElementById(`card${n}Who`);
-      if(who && c.who) who.textContent = c.who;
       
-      // שחזר תוכן מתכון ל-localStorage (כדי ש-openRecipeDetail ימצא)
+      // טקסט — עדכן רק אם יש ערך אמיתי בענן
+      const cat = document.getElementById(`card${n}Cat`);
+      if(cat && c.cat && c.cat.length > 0) cat.textContent = c.cat;
+      const title = document.getElementById(`card${n}Title`);
+      if(title && c.title && c.title.length > 0) title.textContent = c.title;
+      const who = document.getElementById(`card${n}Who`);
+      if(who && c.who && c.who.length > 0) who.textContent = c.who;
+      
+      // שחזר תוכן מתכון ל-localStorage + _loadedCards
       if(c.ingredients || c.steps){
         const extra = {
           ingredients: c.ingredients || '',
