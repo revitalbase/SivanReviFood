@@ -1649,6 +1649,19 @@ window.addEventListener('DOMContentLoaded', () => {
       console.log('🔄 שמירה אוטומטית');
     }
   }, 120000);
+  
+  // סנכרון כשחוזרים לטאב
+  document.addEventListener('visibilitychange', async () => {
+    if(document.visibilityState === 'visible'){
+      // טען מתכונים חדשים מהענן
+      const fresh = await loadSRRecipes();
+      if(fresh.length > srRecipes.length){
+        srRecipes = fresh;
+        toast(`🔄 ${fresh.length - srRecipes.length} מתכונים חדשים סונכרנו`);
+        location.reload();
+      }
+    }
+  });
 });
 
 let editMode = false;
@@ -1874,34 +1887,101 @@ async function initSupabase(){
 let srRecipes = [];
 
 async function loadSRRecipes(){
-  let recipes = [];
+  let localRecipes = [];
+  let cloudRecipes = [];
   
-  // localStorage קודם
+  // localStorage
   try{
     const local = localStorage.getItem('sr_recipes');
-    if(local){ const p=JSON.parse(local); if(Array.isArray(p)) recipes = p; }
+    if(local){ const p=JSON.parse(local); if(Array.isArray(p)) localRecipes = p; }
   }catch(e){}
   
-  // ענן (דרך API שרתי)
+  // ענן
   try{
     const cloudJson = await cloudLoad('shared');
     if(cloudJson){
       const p = JSON.parse(cloudJson);
-      if(Array.isArray(p) && p.length >= recipes.length){
-        recipes = p;
-        try{ localStorage.setItem('sr_recipes', cloudJson); }catch(e){}
-      }
+      if(Array.isArray(p)) cloudRecipes = p;
     }
   }catch(e){}
   
-  console.log(`📋 ${recipes.length} מתכונים דינמיים נטענו`);
+  // מזג — כל מתכון שקיים באחד מהם (לפי id)
+  const merged = new Map();
+  for(const r of cloudRecipes) if(r.id) merged.set(r.id, r);
+  for(const r of localRecipes) if(r.id) merged.set(r.id, r); // local דורס cloud (חדש יותר)
+  
+  let recipes = Array.from(merged.values());
+  
+  // אם מוזגו — סנכרן חזרה
+  if(recipes.length > cloudRecipes.length || recipes.length > localRecipes.length){
+    const json = JSON.stringify(recipes);
+    try{ localStorage.setItem('sr_recipes', json); }catch(e){}
+    if(recipes.length > cloudRecipes.length) cloudSave('shared', json); // ברקע
+  }
+  
+  console.log(`📋 ${recipes.length} מתכונים (local:${localRecipes.length}, cloud:${cloudRecipes.length})`);
   return recipes;
 }
 
 async function saveSRRecipes(){
+  // דחוס תמונות לפני שמירה
+  for(const r of srRecipes){
+    if(r.thumb && r.thumb.startsWith('data:') && r.thumb.length > 50000){
+      try{
+        const c = document.createElement('canvas');
+        const img = new Image();
+        await new Promise(res=>{ img.onload=res; img.src=r.thumb; });
+        let w=img.width, h=img.height;
+        const max=300; if(w>max||h>max){const ra=Math.min(max/w,max/h);w*=ra;h*=ra;}
+        c.width=w; c.height=h; c.getContext('2d').drawImage(img,0,0,w,h);
+        r.thumb = c.toDataURL('image/jpeg',0.4);
+      }catch(e){}
+    }
+    if(r.image && r.image.startsWith('data:') && r.image.length > 80000){
+      try{
+        const c = document.createElement('canvas');
+        const img = new Image();
+        await new Promise(res=>{ img.onload=res; img.src=r.image; });
+        let w=img.width, h=img.height;
+        const max=500; if(w>max||h>max){const ra=Math.min(max/w,max/h);w*=ra;h*=ra;}
+        c.width=w; c.height=h; c.getContext('2d').drawImage(img,0,0,w,h);
+        r.image = c.toDataURL('image/jpeg',0.5);
+      }catch(e){}
+    }
+    // דחוס תמונות בישול
+    if(r.photos){
+      for(let i=0;i<r.photos.length;i++){
+        const p = typeof r.photos[i] === 'string' ? r.photos[i] : r.photos[i]?.data;
+        if(p && p.startsWith('data:') && p.length > 80000){
+          try{
+            const c = document.createElement('canvas');
+            const img = new Image();
+            await new Promise(res=>{ img.onload=res; img.src=p; });
+            let w=img.width, h=img.height;
+            const max=400; if(w>max||h>max){const ra=Math.min(max/w,max/h);w*=ra;h*=ra;}
+            c.width=w; c.height=h; c.getContext('2d').drawImage(img,0,0,w,h);
+            if(typeof r.photos[i] === 'string') r.photos[i] = c.toDataURL('image/jpeg',0.5);
+            else r.photos[i].data = c.toDataURL('image/jpeg',0.5);
+          }catch(e){}
+        }
+      }
+    }
+  }
+  
   const json = JSON.stringify(srRecipes);
-  try{ localStorage.setItem('sr_recipes', json); }catch(e){}
-  await cloudSave('shared', json);
+  console.log(`💾 שומר ${srRecipes.length} מתכונים (${(json.length/1024).toFixed(0)}KB)`);
+  
+  // שמור ל-localStorage
+  try{ localStorage.setItem('sr_recipes', json); }catch(e){ console.error('localStorage full:', e); }
+  
+  // שמור לענן + וידוא
+  const ok = await cloudSave('shared', json);
+  if(ok){
+    console.log('✅ מתכונים נשמרו בענן');
+  } else {
+    console.warn('⚠️ שמירה לענן נכשלה — נשמר מקומית בלבד');
+    toast('⚠️ נשמר מקומית — בדקי חיבור אינטרנט');
+  }
 }
 
 function toast(m){
@@ -2021,9 +2101,14 @@ ${rules}`;
   const r={id:Date.now(),name:recipe.name||'מתכון חדש',url:url||'',category:recipe.category||'עיקרית',author:qSelAu,ingredients:(recipe.ingredients||[]).join('\n'),steps:(recipe.steps||[]).join('\n'),prepTime:recipe.prepTime||'',servings:recipe.servings||'',thumb:qImgData||thumb,image:qImgData,date:new Date().toLocaleDateString('he-IL')};
   srRecipes.unshift(r);
   await saveSRRecipes();
+  
+  // וידוא שנשמר
+  const verifyLocal = localStorage.getItem('sr_recipes');
+  const saved = verifyLocal && verifyLocal.includes(r.name);
+  
   closeQuickModal();
   ov.classList.remove('show'); btn.disabled=false;
-  toast(`🎉 "${r.name}" נשמר!`);
+  toast(saved ? `🎉 "${r.name}" נשמר!` : `⚠️ "${r.name}" נוסף — בדקי שנשמר`);
   renderNewCard(r);
 }
 
