@@ -2337,15 +2337,17 @@ function initStarRatings(){
       });
       star.addEventListener('click', async (e)=>{ e.stopPropagation();
         const key = `card${n}`;
-        // קרא מהענן לפני עדכון — מונע דריסה
-        try{
-          const freshJson = await cloudLoad('sr_ratings');
-          if(freshJson) srRatings = JSON.parse(freshJson);
-        }catch(e2){}
-        if(!srRatings[key]) srRatings[key]={total:0,count:0};
+        try{ const freshJson = await cloudLoad('sr_ratings'); if(freshJson) srRatings = JSON.parse(freshJson); }catch(e2){}
+        if(!srRatings[key]) srRatings[key]={total:0,count:0,list:[]};
         srRatings[key].total += v;
         srRatings[key].count += 1;
+        if(!srRatings[key].list) srRatings[key].list = [];
+        srRatings[key].list.push({stars:v, author:'', date:new Date().toLocaleDateString('he-IL')});
         renderRatings();
+        // עדכן גם תצוגת מתכון אם פתוחה
+        if(document.getElementById('recipeDetailOverlay')?.classList.contains('open') && currentDetailType==='fixed' && currentDetailIdx===n){
+          renderRdRatings('fixed', n);
+        }
         await saveRatings();
         toast(`⭐ תודה על הדירוג!`);
       });
@@ -3151,7 +3153,7 @@ async function saveRdRating(){
     srRatings[key].count += 1;
     if(!srRatings[key].list) srRatings[key].list = [];
     srRatings[key].list.push({stars: rdSelectedStars, author: rdSelectedAuthor, date: new Date().toLocaleDateString('he-IL')});
-    renderRatings();
+    renderRatings(); // עדכן גם כרטיסים בעמוד הבית
     await saveRatings();
   } else {
     const r = srRecipes[idx];
@@ -3161,10 +3163,9 @@ async function saveRdRating(){
     await saveSRRecipes();
   }
   
-  toast('⭐ תודה על הדירוג!');
+  toast('⭐ דירוג נשמר!');
   rdSelectedStars = 0;
   rdSelectedAuthor = '';
-  // רענן תצוגה
   openRecipeDetail(type, idx);
 }
 
