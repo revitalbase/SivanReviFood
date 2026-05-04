@@ -2697,6 +2697,9 @@ function renderAllGrid(cards){
     const clickAction = isFixed
       ? `openRecipeDetail('fixed',${cardNum})`
       : `openRecipeDetail('dynamic',${cardNum})`;
+    const homeBtn = isFixed
+      ? `<button class="card-home-btn ${homeSlots.includes(Number(cardNum))?'on':''}" onclick="event.stopPropagation();toggleHomeCard(${cardNum});renderAllGrid(allRecipesData)" title="עמוד הבית">🏠</button>`
+      : '';
     const editBtn = isFixed
       ? `<button class="card-edit-btn" onclick="event.stopPropagation();openEditCard(${cardNum})" title="ערכי">✏️</button>`
       : `<button class="card-edit-btn" onclick="event.stopPropagation();openEditDynamic(${cardNum})" title="ערכי">✏️</button>
@@ -2705,6 +2708,7 @@ function renderAllGrid(cards){
     <div class="card" style="cursor:pointer" onclick="${clickAction}">
       <div class="card-img" style="height:160px;position:relative">
         ${editBtn}
+        ${homeBtn}
         ${c.img && !c.img.endsWith('undefined')
           ? `<img src="${c.img}" style="width:100%;height:100%;object-fit:cover" onerror="this.style.display='none'"/>`
           : '<div style="height:100%;background:var(--border);display:flex;align-items:center;justify-content:center;font-size:36px">🍽️</div>'}
