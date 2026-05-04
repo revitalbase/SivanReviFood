@@ -90,7 +90,7 @@ body { font-family: 'Heebo', sans-serif; background: var(--cream); color: var(--
 .cat-filter-btn{background:none;border:1.5px solid var(--border);border-radius:50px;padding:6px 14px;font-family:'Heebo',sans-serif;font-size:12px;cursor:pointer;color:#666;transition:.2s;white-space:nowrap;}
 .cat-filter-btn:hover{border-color:var(--gold);color:var(--gold);}
 .cat-filter-btn.active{background:var(--gold);border-color:var(--gold);color:#fff;font-weight:600;}
-@media(max-width:768px){.all-grid{grid-template-columns:1fr;}}
+/* mobile override moved to main @media block */
 
 /* HOMEPAGE SLOTS — תמיד 9 */
 .home-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:24px;}
@@ -606,20 +606,37 @@ body { font-family: 'Heebo', sans-serif; background: var(--cream); color: var(--
 @media(max-width: 768px) {
   .nav { padding: 14px 20px; }
   .nav-links { display: none; }
-  .hero { height: 420px; }
+  .hero { height: 320px; }
   .hero-content { padding: 0 24px; }
-  .hero-title { font-size: 36px; }
-  .section { padding: 36px 20px; }
-  .grid { grid-template-columns: 1fr; }
-  .feature { grid-template-columns: 1fr; padding: 36px 20px; }
+  .hero-title { font-size: 28px; }
+  .section { padding: 24px 12px; }
+  .section-title { font-size: 22px; }
+  .grid { grid-template-columns: repeat(2, 1fr); gap: 10px; }
+  .home-grid { grid-template-columns: repeat(2, 1fr); gap: 10px; }
+  .card-img { height: 120px; }
+  .card-body { padding: 8px 10px; }
+  .card-title { font-size: 13px; }
+  .card-cat { font-size: 8px; }
+  .card-who { font-size: 10px; }
+  .card-stars { gap: 2px; }
+  .star-rating span { font-size: 14px; }
+  .card-bottom { padding: 6px 10px; }
+  .tried-toggle button { font-size: 11px; padding: 4px 8px; }
+  .card-edit-btn { width: 26px; height: 26px; font-size: 11px; }
+  .feature { grid-template-columns: 1fr; padding: 28px 16px; gap: 20px; }
+  .feature-title { font-size: 22px; }
   .edit-panel { width: 100%; }
   .ep-save-bar { width: 100%; }
-  .gallery-header { padding: 0 20px; }
-  .gallery-track { padding: 0 20px; gap: 10px; }
-  .gallery-item { width: 260px; height: 340px; }
-  .gallery-add-btn { width: 160px; height: 340px; }
+  .gallery-header { padding: 0 16px; }
+  .gallery-track { padding: 0 16px; gap: 10px; }
+  .gallery-item { width: 220px; height: 290px; }
+  .gallery-add-btn { width: 140px; height: 290px; }
   .gallery-arrow { display: none; }
+  .rd-hero { height: 180px; }
+  .rd-title { font-size: 20px; }
+  .rd-body { padding: 16px; }
 }
+@media(max-width:768px){.all-grid{grid-template-columns:repeat(2,1fr);gap:10px;}}
 </style>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
@@ -1375,25 +1392,49 @@ body { font-family: 'Heebo', sans-serif; background: var(--cream); color: var(--
 </div>
 <script>
 
-// ── Server-side API (עוקף CORS) ──
+// ── Server-side API (עוקף CORS) עם fallback ──
 async function cloudLoad(id){
+  // נסה API שרתי קודם
   try{
     const r = await fetch('/api/load?id=' + encodeURIComponent(id));
-    const j = await r.json();
-    return j.data || null;
-  }catch(e){ console.warn('cloudLoad error:', e); return null; }
+    if(r.ok){
+      const j = await r.json();
+      if(j.data) return j.data;
+    }
+  }catch(e){}
+  
+  // fallback: Supabase JS client
+  try{
+    const sb = await initSupabase();
+    if(sb){
+      const {data,error} = await sb.from('recipes').select('data').eq('id',id).single();
+      if(!error && data?.data) return data.data;
+    }
+  }catch(e){}
+  return null;
 }
 
 async function cloudSave(id, data){
+  // נסה API שרתי קודם
   try{
     const r = await fetch('/api/save', {
       method:'POST',
       headers:{'Content-Type':'application/json'},
       body: JSON.stringify({id, data})
     });
-    const j = await r.json();
-    return j.success || false;
-  }catch(e){ console.warn('cloudSave error:', e); return false; }
+    if(r.ok){ const j = await r.json(); if(j.success) return true; }
+  }catch(e){}
+  
+  // fallback: Supabase JS client
+  try{
+    const sb = await initSupabase();
+    if(sb){
+      const {error} = await sb.from('recipes')
+        .upsert({id, data, updated_at: new Date().toISOString()}, {onConflict:'id'});
+      return !error;
+    }
+  }catch(e){}
+  return false;
 }
 
 // ── ניקוי מידע פגום ──
