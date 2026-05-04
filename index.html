@@ -2580,12 +2580,17 @@ async function saveHomeSlots(){
 }
 
 function applyHomeSlots(){
+  // אכוף מקסימום 6
+  if(homeSlots.length > 6) homeSlots = homeSlots.slice(0, 6);
+  
   for(let n=1;n<=9;n++){
     const el=document.getElementById(`card${n}`);
     const btn=document.getElementById(`homeBtn${n}`);
-    const isOn = homeSlots.includes(n);
+    const title = document.getElementById(`card${n}Title`)?.textContent?.trim() || '';
+    const isEmpty = !title || title.match(/^מתכון \d$/);
+    const isOn = homeSlots.includes(n) && !isEmpty;
     if(el) el.style.display = isOn ? 'flex' : 'none';
-    if(btn) btn.classList.toggle('on', isOn);
+    if(btn) btn.classList.toggle('on', homeSlots.includes(n));
   }
 }
 
