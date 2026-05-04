@@ -1544,61 +1544,44 @@ body { font-family: 'Heebo', sans-serif; background: var(--cream); color: var(--
 <script>
 
 // ── Server-side API (עוקף CORS) עם fallback ──
-// ── חיבור ישיר ל-Supabase (ללא מתווכים) ──
-let _sbUrl = null;
-let _sbKey = null;
+// ── חיבור ישיר ל-Supabase (hardcoded — ללא שרתי ביניים) ──
+const SUPABASE_URL = "https://cuorvzkjckgxgxrxpfmg.supabase.co";
+const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImN1b3J2emtqY2tneGd4cnhwZm1nIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDQ1NDUwMDMsImV4cCI6MjA2MDEyMTAwM30.YY_qYHVYyP9hi9LBkUb__0qg_ylGe-a19OaDpE-3ibZ";
 
-async function initCloudConfig(){
-  if(_sbUrl) return true;
-  try{
-    const r = await fetch('/api/config');
-    const text = await r.text();
-    // בדוק שזה JSON ולא HTML
-    if(text.startsWith('<') || text.startsWith('<!')) {
-      console.error('❌ /api/config מחזיר HTML במקום JSON');
-      return false;
-    }
-    const cfg = JSON.parse(text);
-    if(cfg.supabaseUrl && cfg.supabaseKey){
-      _sbUrl = cfg.supabaseUrl;
-      _sbKey = cfg.supabaseKey;
-      console.log('✅ Supabase config loaded');
-      return true;
-    }
-  }catch(e){ console.error('❌ initCloudConfig:', e); }
-  return false;
-}
-
-async function cloudLoad(id){
-  if(!await initCloudConfig()) return null;
-  try{
-    const r = await fetch(`${_sbUrl}/rest/v1/recipes?id=eq.${encodeURIComponent(id)}&select=data&t=${Date.now()}`, {
-      headers: { 'apikey': _sbKey, 'Authorization': 'Bearer ' + _sbKey },
-      cache: 'no-store'
-    });
-    if(!r.ok) throw new Error(`HTTP ${r.status}`);
+async function cloudLoad(id) {
+  try {
+    const r = await fetch(
+      `${SUPABASE_URL}/rest/v1/recipes?id=eq.${encodeURIComponent(id)}&select=data&t=${Date.now()}`,
+      {
+        headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': 'Bearer ' + SUPABASE_ANON_KEY },
+        cache: 'no-store'
+      }
+    );
+    if (!r.ok) throw new Error(`HTTP ${r.status}`);
     const rows = await r.json();
-    if(rows?.[0]?.data) return rows[0].data;
-  }catch(e){ console.error(`cloudLoad(${id}):`, e); }
+    if (rows?.[0]?.data) return rows[0].data;
+  } catch (e) { console.error(`cloudLoad(${id}):`, e); }
   return null;
 }
 
-async function cloudSave(id, data){
-  if(!await initCloudConfig()) return false;
-  try{
-    const r = await fetch(`${_sbUrl}/rest/v1/recipes?on_conflict=id`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'apikey': _sbKey,
-        'Authorization': 'Bearer ' + _sbKey,
-        'Prefer': 'resolution=merge-duplicates'
-      },
-      body: JSON.stringify({ id, data, updated_at: new Date().toISOString() })
-    });
-    if(!r.ok) throw new Error(`HTTP ${r.status}`);
+async function cloudSave(id, data) {
+  try {
+    const r = await fetch(
+      `${SUPABASE_URL}/rest/v1/recipes?on_conflict=id`,
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'apikey': SUPABASE_ANON_KEY,
+          'Authorization': 'Bearer ' + SUPABASE_ANON_KEY,
+          'Prefer': 'resolution=merge-duplicates'
+        },
+        body: JSON.stringify({ id, data, updated_at: new Date().toISOString() })
+      }
+    );
+    if (!r.ok) { const t = await r.text(); throw new Error(`HTTP ${r.status}: ${t}`); }
     return true;
-  }catch(e){ console.error(`cloudSave(${id}):`, e); }
+  } catch (e) { console.error(`cloudSave(${id}):`, e); }
   return false;
 }
 
@@ -2534,14 +2517,13 @@ async function loadPageData() {
     if(local){ data = JSON.parse(local); source = 'local'; }
   } catch(e) {}
   
-  // נסה ענן (דרך API שרתי — עוקף CORS)
+  // נסה ענן (חיבור ישיר ל-Supabase)
   try {
     const cloudJson = await cloudLoad('page_content');
     if(cloudJson){
       const cloudData = JSON.parse(cloudJson);
-      const cloudHasImages = cloudData.cards?.some(c => c.img && c.img.length > 100);
-      // ענן מנצח רק אם יש לו תמונות (לא ריק)
-      if(cloudHasImages){
+      // קבל מהענן אם יש לפחות כרטיס אחד עם שם
+      if(cloudData?.cards?.some(c => c.title && c.title.length > 1)){
         data = cloudData;
         source = 'cloud';
         try{ localStorage.setItem('sr_page_data', cloudJson); }catch(e){}
