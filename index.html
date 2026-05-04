@@ -1512,20 +1512,28 @@ body { font-family: 'Heebo', sans-serif; background: var(--cream); color: var(--
 
 // ── Server-side API (עוקף CORS) עם fallback ──
 async function cloudLoad(id){
-  // נסה API שרתי קודם
+  const timeout = ms => new Promise((_,rej) => setTimeout(()=>rej(new Error('timeout')), ms));
+  
+  // נסה API שרתי (עם timeout 5 שניות)
   try{
-    const r = await fetch('/api/load?id=' + encodeURIComponent(id));
+    const r = await Promise.race([
+      fetch('/api/load?id=' + encodeURIComponent(id)),
+      timeout(5000)
+    ]);
     if(r.ok){
       const j = await r.json();
       if(j.data) return j.data;
     }
   }catch(e){}
   
-  // fallback: Supabase JS client
+  // fallback: Supabase JS client (עם timeout 5 שניות)
   try{
-    const sb = await initSupabase();
+    const sb = await Promise.race([initSupabase(), timeout(3000)]);
     if(sb){
-      const {data,error} = await sb.from('recipes').select('data').eq('id',id).single();
+      const {data,error} = await Promise.race([
+        sb.from('recipes').select('data').eq('id',id).single(),
+        timeout(5000)
+      ]);
       if(!error && data?.data) return data.data;
     }
   }catch(e){}
@@ -1533,22 +1541,29 @@ async function cloudLoad(id){
 }
 
 async function cloudSave(id, data){
-  // נסה API שרתי קודם
+  const timeout = ms => new Promise((_,rej) => setTimeout(()=>rej(new Error('timeout')), ms));
+  
+  // נסה API שרתי
   try{
-    const r = await fetch('/api/save', {
-      method:'POST',
-      headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({id, data})
-    });
+    const r = await Promise.race([
+      fetch('/api/save', {
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({id, data})
+      }),
+      timeout(8000)
+    ]);
     if(r.ok){ const j = await r.json(); if(j.success) return true; }
   }catch(e){}
   
   // fallback: Supabase JS client
   try{
-    const sb = await initSupabase();
+    const sb = await Promise.race([initSupabase(), timeout(3000)]);
     if(sb){
-      const {error} = await sb.from('recipes')
-        .upsert({id, data, updated_at: new Date().toISOString()}, {onConflict:'id'});
+      const {error} = await Promise.race([
+        sb.from('recipes').upsert({id, data, updated_at: new Date().toISOString()}, {onConflict:'id'}),
+        timeout(8000)
+      ]);
       return !error;
     }
   }catch(e){}
@@ -2734,7 +2749,7 @@ function exportHTML() {
 let erSelectedAuthor = '';
 let erFileData = '';
 
-async function openEditCard(n){
+function openEditCard(n){
   
   erFileData = '';
   document.getElementById('erType').value = 'fixed';
@@ -2767,18 +2782,9 @@ async function openEditCard(n){
   document.getElementById('erUrlGroup').style.display = 'block';
   document.getElementById('erPhotosGroup').style.display = 'block';
   
-  // Load saved extra data for this card
+  // Load saved extra data for this card (localStorage מיד, ענן ברקע)
   const extraKey = `card${n}_extra`;
   let extra = JSON.parse(localStorage.getItem(extraKey) || '{}');
-  if(!extra.ingredients && !extra.steps){
-    try{
-      const cloudJson = await cloudLoad(extraKey);
-      if(cloudJson){
-        extra = JSON.parse(cloudJson);
-        localStorage.setItem(extraKey, cloudJson);
-      }
-    }catch(e){}
-  }
   document.getElementById('erIngredients').value = extra.ingredients || '';
   document.getElementById('erSteps').value = extra.steps || '';
   document.getElementById('erPrepTime').value = extra.prepTime || '';
@@ -2789,6 +2795,25 @@ async function openEditCard(n){
   
   document.getElementById('erFileIn').value = '';
   document.getElementById('editRecipeOverlay').classList.add('open');
+  
+  // אם ריק — נסה ענן ברקע ועדכן שדות
+  if(!extra.ingredients && !extra.steps){
+    cloudLoad(extraKey).then(cloudJson => {
+      if(!cloudJson) return;
+      try{
+        const ce = JSON.parse(cloudJson);
+        localStorage.setItem(extraKey, cloudJson);
+        if(document.getElementById('editRecipeOverlay').classList.contains('open')){
+          if(ce.ingredients) document.getElementById('erIngredients').value = ce.ingredients;
+          if(ce.steps) document.getElementById('erSteps').value = ce.steps;
+          if(ce.prepTime) document.getElementById('erPrepTime').value = ce.prepTime;
+          if(ce.servings) document.getElementById('erServings').value = ce.servings;
+          if(ce.url) document.getElementById('erUrl').value = ce.url;
+          if(ce.photos){ renderERPhotos(ce.photos); erCurrentPhotos = ce.photos; }
+        }
+      }catch(e){}
+    }).catch(()=>{});
+  }
 }
 
 function openEditDynamic(idx){
@@ -2928,7 +2953,7 @@ async function saveTextEdits(){
 let currentDetailType = '';
 let currentDetailIdx = 0;
 
-async function openRecipeDetail(type, idx){
+function openRecipeDetail(type, idx){
   currentDetailType = type;
   currentDetailIdx = idx;
   
@@ -2941,23 +2966,33 @@ async function openRecipeDetail(type, idx){
     title = document.getElementById(`card${n}Title`)?.textContent || '';
     author = document.getElementById(`card${n}Who`)?.textContent || '';
     
-    // טען extras — localStorage ואם ריק, מהענן
-    let extra = JSON.parse(localStorage.getItem(`card${n}_extra`) || '{}');
-    if(!extra.ingredients && !extra.steps){
-      try{
-        const cloudJson = await cloudLoad(`card${n}_extra`);
-        if(cloudJson){
-          extra = JSON.parse(cloudJson);
-          localStorage.setItem(`card${n}_extra`, cloudJson);
-        }
-      }catch(e){}
-    }
+    // טען מ-localStorage מיד (סינכרוני)
+    const extra = JSON.parse(localStorage.getItem(`card${n}_extra`) || '{}');
     ingredients = extra.ingredients || '';
     steps = extra.steps || '';
     prepTime = extra.prepTime || '';
     servings = extra.servings || '';
     url = extra.url || '';
     photos = extra.photos || [];
+    
+    // אם ריק — נסה ענן ברקע ועדכן
+    if(!ingredients && !steps){
+      cloudLoad(`card${n}_extra`).then(cloudJson => {
+        if(!cloudJson) return;
+        try{
+          const ce = JSON.parse(cloudJson);
+          localStorage.setItem(`card${n}_extra`, cloudJson);
+          // עדכן את המודל אם עדיין פתוח
+          if(document.getElementById('recipeDetailOverlay').classList.contains('open') && currentDetailIdx === n && currentDetailType === 'fixed'){
+            if(ce.ingredients){ document.getElementById('rdIngredientsSection').style.display='block'; document.getElementById('rdIngredients').textContent=ce.ingredients; }
+            if(ce.steps){ document.getElementById('rdStepsSection').style.display='block'; document.getElementById('rdSteps').textContent=ce.steps; }
+            if(ce.prepTime) document.getElementById('rdPrepTime').textContent='⏱️ '+ce.prepTime;
+            if(ce.servings) document.getElementById('rdServings').textContent='🍽️ '+ce.servings;
+            if(ce.url){ document.getElementById('rdUrlSection').style.display='block'; document.getElementById('rdUrl').href=ce.url; }
+          }
+        }catch(e){}
+      }).catch(()=>{});
+    }
   } else {
     const r = srRecipes[idx];
     if(!r) return;
@@ -2973,7 +3008,12 @@ async function openRecipeDetail(type, idx){
     photos = r.photos || [];
   }
   
-  // Render
+  // פתח מיד — לא מחכה לענן
+  renderRecipeDetail(img, cat, title, author, ingredients, steps, prepTime, servings, url, photos);
+  document.getElementById('recipeDetailOverlay').classList.add('open');
+}
+
+function renderRecipeDetail(img, cat, title, author, ingredients, steps, prepTime, servings, url, photos){
   const hero = document.getElementById('rdHero');
   if(img && img.length > 10) hero.innerHTML = `<button class="rd-close" onclick="closeRecipeDetail()">✕</button><button class="rd-edit-btn" onclick="editFromDetail()">✏️ ערכי</button><img src="${img}" />`;
   else hero.innerHTML = `<button class="rd-close" onclick="closeRecipeDetail()">✕</button><button class="rd-edit-btn" onclick="editFromDetail()">✏️ ערכי</button><div class="empty">🍽️</div>`;
@@ -3001,8 +3041,6 @@ async function openRecipeDetail(type, idx){
     phS.style.display = 'block';
     document.getElementById('rdPhotos').innerHTML = photos.map(p => `<img src="${p}" onclick="openLightbox(-1);document.querySelector('#lbContent').innerHTML='<img src=\\'${p}\\' style=\\'max-width:90vw;max-height:85vh;object-fit:contain;border-radius:8px\\' />';document.getElementById('galleryLightbox').classList.add('open');document.body.style.overflow='hidden'" />`).join('');
   } else phS.style.display = 'none';
-  
-  document.getElementById('recipeDetailOverlay').classList.add('open');
 }
 
 function closeRecipeDetail(){
