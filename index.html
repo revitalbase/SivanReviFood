@@ -3694,10 +3694,15 @@ function lbNav(dir){
   renderLbContent();
 }
 
-// Keyboard + touch for lightbox
+// Keyboard + touch for lightbox and modals
 document.addEventListener('keydown', e => {
+  if(e.key === 'Escape'){
+    if(document.getElementById('editRecipeOverlay')?.classList.contains('open')) return closeEditRecipe();
+    if(document.getElementById('recipeDetailOverlay')?.classList.contains('open')) return closeRecipeDetail();
+    if(document.getElementById('galleryLightbox')?.classList.contains('open')) return closeLightbox();
+    if(document.getElementById('allRecipesModal')?.classList.contains('open')){ document.getElementById('allRecipesModal').classList.remove('open'); return; }
+  }
   if(!document.getElementById('galleryLightbox').classList.contains('open')) return;
-  if(e.key === 'Escape') closeLightbox();
   if(e.key === 'ArrowLeft') lbNav(1);
   if(e.key === 'ArrowRight') lbNav(-1);
 });
