@@ -665,7 +665,8 @@ body { font-family: 'Heebo', sans-serif; background: var(--cream); color: var(--
   .section-title { font-size: 22px; }
   .grid { grid-template-columns: repeat(2, 1fr); gap: 10px; }
   .home-grid { grid-template-columns: repeat(2, 1fr); gap: 10px; }
-  .card-img { height: 120px; }
+  .card-img { height: 140px; min-height: 140px; }
+  .card-img img { min-height: 100%; }
   .card-body { padding: 8px 10px; }
   .card-title { font-size: 13px; cursor: pointer; color: var(--gold); text-decoration: underline; text-decoration-color: rgba(201,169,110,.3); text-underline-offset: 2px; }
   .card-cat { font-size: 8px; }
@@ -738,7 +739,7 @@ body { font-family: 'Heebo', sans-serif; background: var(--cream); color: var(--
       <div class="card-img">
         <button class="card-edit-btn" onclick="event.stopPropagation();openEditCard(1)" title="ערכי מתכון">✏️</button>
         <button class="card-home-btn" id="homeBtn1" onclick="event.stopPropagation();toggleHomeCard(1)" title="הצג/הסתר בעמוד הבית">🏠</button>
-        <img id="card1Img" onclick="openRecipeDetail('fixed',1)" onclick="event.stopPropagation();openRecipeDetail('fixed',1)" src="https://res.cloudinary.com/dt3n4di9i/image/upload/v1774972052/IMG_9063_zgziqt.jpg" onerror="this.style.display='none'" />
+        <img id="card1Img" onclick="event.stopPropagation();openRecipeDetail(\'fixed\',1)" src="https://res.cloudinary.com/dt3n4di9i/image/upload/v1774972052/IMG_9063_zgziqt.jpg" onerror="this.src=''" />
         <div class="card-accent"></div>
       </div>
       <div class="card-body" onclick="event.stopPropagation();openRecipeDetail('fixed',1)" style="cursor:pointer">
@@ -763,7 +764,7 @@ body { font-family: 'Heebo', sans-serif; background: var(--cream); color: var(--
       <div class="card-img">
         <button class="card-edit-btn" onclick="event.stopPropagation();openEditCard(2)" title="ערכי מתכון">✏️</button>
         <button class="card-home-btn" id="homeBtn2" onclick="event.stopPropagation();toggleHomeCard(2)" title="הצג/הסתר בעמוד הבית">🏠</button>
-        <img id="card2Img" onclick="openRecipeDetail('fixed',2)" onclick="event.stopPropagation();openRecipeDetail('fixed',2)" src="https://res.cloudinary.com/dt3n4di9i/image/upload/v1774972098/IMG_5018_zsdhts.jpg" onerror="this.style.display='none'" />
+        <img id="card2Img" onclick="event.stopPropagation();openRecipeDetail(\'fixed\',2)" src="https://res.cloudinary.com/dt3n4di9i/image/upload/v1774972098/IMG_5018_zsdhts.jpg" onerror="this.src=''" />
         <div class="card-accent"></div>
       </div>
       <div class="card-body" onclick="event.stopPropagation();openRecipeDetail('fixed',2)" style="cursor:pointer">
@@ -788,7 +789,7 @@ body { font-family: 'Heebo', sans-serif; background: var(--cream); color: var(--
       <div class="card-img">
         <button class="card-edit-btn" onclick="event.stopPropagation();openEditCard(3)" title="ערכי מתכון">✏️</button>
         <button class="card-home-btn" id="homeBtn3" onclick="event.stopPropagation();toggleHomeCard(3)" title="הצג/הסתר בעמוד הבית">🏠</button>
-        <img id="card3Img" onclick="openRecipeDetail('fixed',3)" onclick="event.stopPropagation();openRecipeDetail('fixed',3)" src="https://res.cloudinary.com/dt3n4di9i/image/upload/v1774972079/IMG_9255_bxid0b.jpg" onerror="this.style.display='none'" />
+        <img id="card3Img" onclick="event.stopPropagation();openRecipeDetail(\'fixed\',3)" src="https://res.cloudinary.com/dt3n4di9i/image/upload/v1774972079/IMG_9255_bxid0b.jpg" onerror="this.src=''" />
         <div class="card-accent"></div>
       </div>
       <div class="card-body" onclick="event.stopPropagation();openRecipeDetail('fixed',3)" style="cursor:pointer">
@@ -813,7 +814,7 @@ body { font-family: 'Heebo', sans-serif; background: var(--cream); color: var(--
       <div class="card-img">
         <button class="card-edit-btn" onclick="event.stopPropagation();openEditCard(4)" title="ערכי מתכון">✏️</button>
         <button class="card-home-btn" id="homeBtn4" onclick="event.stopPropagation();toggleHomeCard(4)" title="הצג/הסתר בעמוד הבית">🏠</button>
-        <img id="card4Img" onclick="openRecipeDetail('fixed',4)" onclick="event.stopPropagation();openRecipeDetail('fixed',4)" src="https://res.cloudinary.com/dt3n4di9i/image/upload/v1774972069/IMG_3723_rqymqf.jpg" onerror="this.style.display='none'" />
+        <img id="card4Img" onclick="event.stopPropagation();openRecipeDetail(\'fixed\',4)" src="https://res.cloudinary.com/dt3n4di9i/image/upload/v1774972069/IMG_3723_rqymqf.jpg" onerror="this.src=''" />
         <div class="card-accent"></div>
       </div>
       <div class="card-body" onclick="event.stopPropagation();openRecipeDetail('fixed',4)" style="cursor:pointer">
@@ -838,7 +839,7 @@ body { font-family: 'Heebo', sans-serif; background: var(--cream); color: var(--
       <div class="card-img">
         <button class="card-edit-btn" onclick="event.stopPropagation();openEditCard(5)" title="ערכי מתכון">✏️</button>
         <button class="card-home-btn" id="homeBtn5" onclick="event.stopPropagation();toggleHomeCard(5)" title="הצג/הסתר בעמוד הבית">🏠</button>
-        <img id="card5Img" onclick="openRecipeDetail('fixed',5)" onclick="event.stopPropagation();openRecipeDetail('fixed',5)" src="https://res.cloudinary.com/dt3n4di9i/image/upload/v1774972125/IMG_8243_irr0j4.jpg" onerror="this.style.display='none'" />
+        <img id="card5Img" onclick="event.stopPropagation();openRecipeDetail(\'fixed\',5)" src="https://res.cloudinary.com/dt3n4di9i/image/upload/v1774972125/IMG_8243_irr0j4.jpg" onerror="this.src=''" />
         <div class="card-accent"></div>
       </div>
       <div class="card-body" onclick="event.stopPropagation();openRecipeDetail('fixed',5)" style="cursor:pointer">
@@ -863,7 +864,7 @@ body { font-family: 'Heebo', sans-serif; background: var(--cream); color: var(--
       <div class="card-img">
         <button class="card-edit-btn" onclick="event.stopPropagation();openEditCard(6)" title="ערכי מתכון">✏️</button>
         <button class="card-home-btn" id="homeBtn6" onclick="event.stopPropagation();toggleHomeCard(6)" title="הצג/הסתר בעמוד הבית">🏠</button>
-        <img id="card6Img" onclick="openRecipeDetail('fixed',6)" onclick="event.stopPropagation();openRecipeDetail('fixed',6)" src="https://res.cloudinary.com/dt3n4di9i/image/upload/v1774972052/IMG_9063_zgziqt.jpg" onerror="this.style.display='none'" />
+        <img id="card6Img" onclick="event.stopPropagation();openRecipeDetail(\'fixed\',6)" src="https://res.cloudinary.com/dt3n4di9i/image/upload/v1774972052/IMG_9063_zgziqt.jpg" onerror="this.src=''" />
         <div class="card-accent"></div>
       </div>
       <div class="card-body" onclick="event.stopPropagation();openRecipeDetail('fixed',6)" style="cursor:pointer">
@@ -888,7 +889,7 @@ body { font-family: 'Heebo', sans-serif; background: var(--cream); color: var(--
       <div class="card-img">
         <button class="card-edit-btn" onclick="event.stopPropagation();openEditCard(7)" title="ערכי מתכון">✏️</button>
         <button class="card-home-btn" id="homeBtn7" onclick="event.stopPropagation();toggleHomeCard(7)" title="הצג/הסתר בעמוד הבית">🏠</button>
-        <img id="card7Img" onclick="openRecipeDetail('fixed',7)" onclick="event.stopPropagation();openRecipeDetail('fixed',7)" src="" style="display:none" />
+        <img id="card7Img" onclick="event.stopPropagation();openRecipeDetail(\'fixed\',7)" src="" style="display:none" />
         <div class="card-accent"></div>
       </div>
       <div class="card-body" onclick="event.stopPropagation();openRecipeDetail('fixed',7)" style="cursor:pointer">
@@ -913,7 +914,7 @@ body { font-family: 'Heebo', sans-serif; background: var(--cream); color: var(--
       <div class="card-img">
         <button class="card-edit-btn" onclick="event.stopPropagation();openEditCard(8)" title="ערכי מתכון">✏️</button>
         <button class="card-home-btn" id="homeBtn8" onclick="event.stopPropagation();toggleHomeCard(8)" title="הצג/הסתר בעמוד הבית">🏠</button>
-        <img id="card8Img" onclick="openRecipeDetail('fixed',8)" onclick="event.stopPropagation();openRecipeDetail('fixed',8)" src="" style="display:none" />
+        <img id="card8Img" onclick="event.stopPropagation();openRecipeDetail(\'fixed\',8)" src="" style="display:none" />
         <div class="card-accent"></div>
       </div>
       <div class="card-body" onclick="event.stopPropagation();openRecipeDetail('fixed',8)" style="cursor:pointer">
@@ -938,7 +939,7 @@ body { font-family: 'Heebo', sans-serif; background: var(--cream); color: var(--
       <div class="card-img">
         <button class="card-edit-btn" onclick="event.stopPropagation();openEditCard(9)" title="ערכי מתכון">✏️</button>
         <button class="card-home-btn" id="homeBtn9" onclick="event.stopPropagation();toggleHomeCard(9)" title="הצג/הסתר בעמוד הבית">🏠</button>
-        <img id="card9Img" onclick="openRecipeDetail('fixed',9)" onclick="event.stopPropagation();openRecipeDetail('fixed',9)" src="" style="display:none" />
+        <img id="card9Img" onclick="event.stopPropagation();openRecipeDetail(\'fixed\',9)" src="" style="display:none" />
         <div class="card-accent"></div>
       </div>
       <div class="card-body" onclick="event.stopPropagation();openRecipeDetail('fixed',9)" style="cursor:pointer">
@@ -2279,7 +2280,7 @@ function renderNewCard(r){
     <div class="card-img">
       <button class="card-edit-btn" onclick="event.stopPropagation();openEditDynamic(${idx})" title="ערכי מתכון">✏️</button>
       <button class="card-delete-btn" onclick="event.stopPropagation();deleteDynamic(${idx})" title="מחקי מתכון">🗑️</button>
-      <img src="${r.thumb||''}" onerror="this.style.display='none'" />
+      <img src="${r.thumb||''}" onerror="this.src=''" />
       <div class="card-accent"></div>
     </div>
     <div class="card-body">
@@ -2457,11 +2458,14 @@ function collectPageData() {
   const cards = [];
   [1,2,3,4,5,6,7,8,9].forEach(n => {
     const el = document.getElementById(`card${n}Img`);
-    // כלול גם את תוכן המתכון (מצרכים, שלבים וכו')
+    let imgSrc = el ? (el.src||'') : '';
+    // לא לשמור base64 ענק של תמונות כרטיסים — רק URLs
+    if(imgSrc.startsWith('data:') && imgSrc.length > 500) imgSrc = '';
+    
     let extra = {};
     try{ extra = JSON.parse(localStorage.getItem(`card${n}_extra`) || '{}'); }catch(e){}
     cards.push({
-      img:   el ? (el.src||'') : '',
+      img:   imgSrc,
       cat:   g(`card${n}Cat`),
       title: g(`card${n}Title`),
       who:   g(`card${n}Who`),
@@ -2559,9 +2563,10 @@ async function loadPageData() {
       const cardEl = document.getElementById(`card${n}`);
       if(!cardEl) return;
       
-      // תמונה — רק אם הענן מכיל תמונה ארוכה יותר ממה שכבר ב-HTML
+      // תמונה — לעולם לא לדרוס תמונה קיימת עם ריק
       const img = document.getElementById(`card${n}Img`);
-      if(img && c.img && c.img.length > 20 && c.img.length > (img.src||'').length * 0.8){
+      const existingSrc = img?.src || '';
+      if(img && c.img && c.img.length > 20 && (!existingSrc || existingSrc.length < 5)){
         img.src = c.img; img.style.display = 'block';
       }
       
@@ -2776,7 +2781,7 @@ function renderAllGrid(cards){
         ${editBtn}
         ${homeBtn}
         ${c.img && !c.img.endsWith('undefined')
-          ? `<img src="${c.img}" style="width:100%;height:100%;object-fit:cover" onerror="this.style.display='none'"/>`
+          ? `<img src="${c.img}" style="width:100%;height:100%;object-fit:cover" onerror="this.src=''"/>`
           : '<div style="height:100%;background:var(--border);display:flex;align-items:center;justify-content:center;font-size:36px">🍽️</div>'}
         <div class="card-accent"></div>
       </div>
