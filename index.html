@@ -2059,7 +2059,11 @@ async function loadSRRecipes(){
     const cloudJson = await cloudLoad('shared');
     if(cloudJson){
       const p = JSON.parse(cloudJson);
-      if(Array.isArray(p)) cloudRecipes = p;
+      if(Array.isArray(p) && p.length){
+        cloudRecipes = p;
+        // שמור ל-localStorage כ-cache
+        try{ localStorage.setItem('sr_recipes', cloudJson); }catch(e){}
+      }
     }
   }catch(e){}
   
@@ -2814,7 +2818,27 @@ function searchAllRecipes(q){
   document.getElementById('allCount').textContent = `${filtered.length} מתכונים`;
 }
 
-function openAllRecipes(){
+async function openAllRecipes(){
+  // אם אין מתכונים דינמיים — נסה לטעון מהענן ומ-localStorage
+  if(!srRecipes.length){
+    // נסה localStorage קודם
+    try{
+      const local = localStorage.getItem('sr_recipes');
+      if(local){ const p=JSON.parse(local); if(Array.isArray(p) && p.length) srRecipes = p; }
+    }catch(e){}
+    // נסה ענן
+    if(!srRecipes.length){
+      try{
+        const cloudJson = await cloudLoad('shared');
+        if(cloudJson){
+          const p = JSON.parse(cloudJson);
+          if(Array.isArray(p) && p.length){ srRecipes = p; try{localStorage.setItem('sr_recipes',cloudJson);}catch(e){} }
+        }
+      }catch(e){}
+    }
+  }
+  console.log(`📋 openAllRecipes: ${srRecipes.length} מתכונים דינמיים`);
+  
   allRecipesData = buildAllRecipesData();
   buildCatFilters(allRecipesData);
   currentCatFilter = 'all';
