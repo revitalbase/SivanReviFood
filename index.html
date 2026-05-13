@@ -3560,20 +3560,50 @@ async function saveGalleryExtra(extraItems){
   await cloudSave('sr_gallery', json);
 }
 
+let _galleryDeletedIndices = [];
+
+function deleteGalleryItem(idx){
+  if(!confirm('למחוק את התמונה הזו מהגלריה?')) return;
+  // שמור את ה-hash של הפריט שנמחק (כדי לזהות אותו גם אחרי שינוי סדר)
+  const item = galleryItems[idx];
+  const hash = item.src.substring(item.src.length - 40);
+  const deleted = JSON.parse(localStorage.getItem('sr_gallery_deleted') || '[]');
+  deleted.push(hash);
+  try{ localStorage.setItem('sr_gallery_deleted', JSON.stringify(deleted)); }catch(e){}
+  
+  galleryItems.splice(idx, 1);
+  renderGallery();
+  toast('🗑️ נמחק מהגלריה');
+}
+
 function renderGallery(){
+  // סנן פריטים שנמחקו
+  try{
+    const deleted = JSON.parse(localStorage.getItem('sr_gallery_deleted') || '[]');
+    if(deleted.length){
+      galleryItems = galleryItems.filter(item => {
+        const hash = item.src.substring(item.src.length - 40);
+        return !deleted.includes(hash);
+      });
+    }
+  }catch(e){}
+  
   const track = document.getElementById('galleryTrack');
   const counter = document.getElementById('galleryCounter');
   if(!track) return;
   counter.textContent = galleryItems.length + ' תמונות';
   let html = '';
   galleryItems.forEach((item, i) => {
+    const delBtn = `<button onclick="event.stopPropagation();deleteGalleryItem(${i})" style="position:absolute;top:6px;right:6px;width:26px;height:26px;background:rgba(0,0,0,.6);color:#fff;border:none;border-radius:50%;font-size:12px;cursor:pointer;z-index:5;display:flex;align-items:center;justify-content:center">✕</button>`;
     if(item.type === 'video'){
-      html += `<div class="gallery-item" data-idx="${i}" onclick="openLightbox(${i})">
+      html += `<div class="gallery-item" data-idx="${i}" onclick="openLightbox(${i})" style="position:relative">
+        ${delBtn}
         <video src="${item.src}" muted loop playsinline preload="metadata" onerror="this.parentElement.style.display='none'"></video>
         <div class="gallery-play-icon"></div>
       </div>`;
     } else {
-      html += `<div class="gallery-item" data-idx="${i}" onclick="openLightbox(${i})">
+      html += `<div class="gallery-item" data-idx="${i}" onclick="openLightbox(${i})" style="position:relative">
+        ${delBtn}
         <img src="${item.src}" alt="בישול" loading="lazy" onerror="this.parentElement.style.display='none'" />
       </div>`;
     }
