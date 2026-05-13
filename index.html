@@ -3548,9 +3548,19 @@ async function loadGalleryItems(){
       }
     }
   }catch(e){}
-  // שמור עותק מקורי ואז יישם סדר שמור
+  // שמור עותק מקורי ואז נסה ליישם סדר שמור
   _galleryOriginal = [...galleryItems];
-  await loadGalleryOrder();
+  try{
+    await loadGalleryOrder();
+  }catch(e){
+    console.warn('loadGalleryOrder failed:', e);
+    galleryItems = [..._galleryOriginal];
+  }
+  // בטיחות — אם הגלריה התרוקנה, שחזר מקור
+  if(galleryItems.length === 0 && _galleryOriginal.length > 0){
+    console.warn('⚠️ Gallery empty — restoring original');
+    galleryItems = [..._galleryOriginal];
+  }
   renderGallery();
   startGalleryAuto();
 }
@@ -3623,15 +3633,18 @@ function galleryDragEnd(e){
 }
 
 async function saveGalleryOrder(){
-  // שמור רשימת hashes בסדר הנוכחי
   const order = galleryItems.map(item => getGalleryHash(item));
   try{ localStorage.setItem('sr_gallery_order', JSON.stringify(order)); }catch(e){}
+  try{ localStorage.setItem('sr_gallery_edited', 'true'); }catch(e){}
   await cloudSave('sr_gallery_order', JSON.stringify(order));
   console.log(`💾 Gallery order saved: ${order.length} items`);
 }
 
 async function loadGalleryOrder(){
-  // טען סדר שמור ויישם על galleryItems
+  // טען סדר רק אם המשתמש ערך את הגלריה
+  const edited = localStorage.getItem('sr_gallery_edited');
+  if(!edited) return; // לא נערך — השאר מקור
+  
   let order = null;
   try{
     const local = localStorage.getItem('sr_gallery_order');
@@ -3642,29 +3655,36 @@ async function loadGalleryOrder(){
     const cloudJson = await cloudLoad('sr_gallery_order');
     if(cloudJson){
       const cloudOrder = JSON.parse(cloudJson);
-      // ענן מנצח אם יש לו סדר
       if(Array.isArray(cloudOrder) && cloudOrder.length > 0) order = cloudOrder;
     }
   }catch(e){}
   
-  if(!order || !order.length) return;
+  if(!order || !Array.isArray(order) || order.length === 0) return;
   
   // בנה מפה של hash → item
-  const hashMap = {};
+  const hashMap = new Map();
   _galleryOriginal.forEach(item => {
     const h = getGalleryHash(item);
-    if(!hashMap[h]) hashMap[h] = item;
+    // אם יש כמה עם אותו hash, שמור את כולם
+    if(!hashMap.has(h)) hashMap.set(h, []);
+    hashMap.get(h).push(item);
   });
   
-  // סדר לפי הרשימה השמורה (פריטים שלא ברשימה = נמחקו)
+  // סדר לפי הרשימה השמורה
   const reordered = [];
   order.forEach(h => {
-    if(hashMap[h]) reordered.push(hashMap[h]);
+    const items = hashMap.get(h);
+    if(items && items.length > 0){
+      reordered.push(items.shift()); // קח את הראשון ומחק מהרשימה
+    }
   });
   
-  if(reordered.length > 0){
+  // רק אם נשאר לפחות חצי מהמקור — יישם
+  if(reordered.length >= _galleryOriginal.length * 0.3){
     galleryItems = reordered;
-    console.log(`📋 Gallery order restored: ${reordered.length} items (was ${_galleryOriginal.length})`);
+    console.log(`📋 Gallery: ${reordered.length}/${_galleryOriginal.length} items restored`);
+  } else {
+    console.warn(`⚠️ Gallery order mismatch (${reordered.length}/${_galleryOriginal.length}) — using original`);
   }
 }
 
