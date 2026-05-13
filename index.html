@@ -2469,8 +2469,8 @@ function collectPageData() {
   [1,2,3,4,5,6,7,8,9].forEach(n => {
     const el = document.getElementById(`card${n}Img`);
     let imgSrc = el ? (el.src||'') : '';
-    // לא לשמור base64 ענק של תמונות כרטיסים — רק URLs
-    if(imgSrc.startsWith('data:') && imgSrc.length > 500) imgSrc = '';
+    // סנן רק base64 ענק מאוד (תמונות מקוריות לא דחוסות)
+    if(imgSrc.startsWith('data:') && imgSrc.length > 200000) imgSrc = '';
     
     let extra = {};
     try{ extra = JSON.parse(localStorage.getItem(`card${n}_extra`) || '{}'); }catch(e){}
@@ -2573,10 +2573,9 @@ async function loadPageData() {
       const cardEl = document.getElementById(`card${n}`);
       if(!cardEl) return;
       
-      // תמונה — לעולם לא לדרוס תמונה קיימת עם ריק
+      // תמונה — קבל מהענן אם יש
       const img = document.getElementById(`card${n}Img`);
-      const existingSrc = img?.src || '';
-      if(img && c.img && c.img.length > 20 && (!existingSrc || existingSrc.length < 5)){
+      if(img && c.img && c.img.length > 20){
         img.src = c.img; img.style.display = 'block';
       }
       
