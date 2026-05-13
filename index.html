@@ -3561,33 +3561,51 @@ async function saveGalleryExtra(extraItems){
 }
 
 let _galleryDeletedIndices = [];
+let _dragIdx = -1;
+let _wasDragging = false;
 
 function deleteGalleryItem(idx){
   if(!confirm('למחוק את התמונה הזו מהגלריה?')) return;
-  // שמור את ה-hash של הפריט שנמחק (כדי לזהות אותו גם אחרי שינוי סדר)
-  const item = galleryItems[idx];
-  const hash = item.src.substring(item.src.length - 40);
-  const deleted = JSON.parse(localStorage.getItem('sr_gallery_deleted') || '[]');
-  deleted.push(hash);
-  try{ localStorage.setItem('sr_gallery_deleted', JSON.stringify(deleted)); }catch(e){}
-  
   galleryItems.splice(idx, 1);
   renderGallery();
-  toast('🗑️ נמחק מהגלריה');
+  toast(`🗑️ נמחק! (נשארו ${galleryItems.length} פריטים)`);
+}
+
+function galleryDragStart(e, idx){
+  _dragIdx = idx;
+  _wasDragging = true;
+  e.currentTarget.style.opacity = '0.4';
+  e.dataTransfer.effectAllowed = 'move';
+}
+
+function galleryDragOver(e){
+  e.preventDefault();
+  e.dataTransfer.dropEffect = 'move';
+  e.currentTarget.style.outline = '3px solid var(--gold)';
+  e.currentTarget.style.outlineOffset = '-3px';
+}
+
+function galleryDrop(e, dropIdx){
+  e.preventDefault();
+  e.currentTarget.style.outline = '';
+  if(_dragIdx === -1 || _dragIdx === dropIdx) return;
+  const temp = galleryItems[_dragIdx];
+  galleryItems[_dragIdx] = galleryItems[dropIdx];
+  galleryItems[dropIdx] = temp;
+  _dragIdx = -1;
+  renderGallery();
+  toast('🔄 סדר עודכן');
+}
+
+function galleryDragEnd(e){
+  e.currentTarget.style.opacity = '';
+  e.currentTarget.style.outline = '';
+  _dragIdx = -1;
+  document.querySelectorAll('.gallery-item').forEach(el => { el.style.outline = ''; });
+  setTimeout(() => { _wasDragging = false; }, 100);
 }
 
 function renderGallery(){
-  // סנן פריטים שנמחקו
-  try{
-    const deleted = JSON.parse(localStorage.getItem('sr_gallery_deleted') || '[]');
-    if(deleted.length){
-      galleryItems = galleryItems.filter(item => {
-        const hash = item.src.substring(item.src.length - 40);
-        return !deleted.includes(hash);
-      });
-    }
-  }catch(e){}
-  
   const track = document.getElementById('galleryTrack');
   const counter = document.getElementById('galleryCounter');
   if(!track) return;
@@ -3595,14 +3613,15 @@ function renderGallery(){
   let html = '';
   galleryItems.forEach((item, i) => {
     const delBtn = `<button onclick="event.stopPropagation();deleteGalleryItem(${i})" style="position:absolute;top:6px;right:6px;width:26px;height:26px;background:rgba(0,0,0,.6);color:#fff;border:none;border-radius:50%;font-size:12px;cursor:pointer;z-index:5;display:flex;align-items:center;justify-content:center">✕</button>`;
+    const dragAttr = `draggable="true" ondragstart="galleryDragStart(event,${i})" ondragover="galleryDragOver(event)" ondragleave="this.style.outline=''" ondrop="galleryDrop(event,${i})" ondragend="galleryDragEnd(event)"`;
     if(item.type === 'video'){
-      html += `<div class="gallery-item" data-idx="${i}" onclick="openLightbox(${i})" style="position:relative">
+      html += `<div class="gallery-item" data-idx="${i}" onclick="if(!_wasDragging)openLightbox(${i})" style="position:relative" ${dragAttr}>
         ${delBtn}
         <video src="${item.src}" muted loop playsinline preload="metadata" onerror="this.parentElement.style.display='none'"></video>
         <div class="gallery-play-icon"></div>
       </div>`;
     } else {
-      html += `<div class="gallery-item" data-idx="${i}" onclick="openLightbox(${i})" style="position:relative">
+      html += `<div class="gallery-item" data-idx="${i}" onclick="if(!_wasDragging)openLightbox(${i})" style="position:relative" ${dragAttr}>
         ${delBtn}
         <img src="${item.src}" alt="בישול" loading="lazy" onerror="this.parentElement.style.display='none'" />
       </div>`;
