@@ -1,11 +1,12 @@
 {
-  "version": 2,
-  "routes": [
-    { "src": "/api/claude", "dest": "/api/claude.js" },
-    { "src": "/api/config", "dest": "/api/config.js" },
-    { "src": "/api/thumb",  "dest": "/api/thumb.js"  },
-    { "src": "/api/load",   "dest": "/api/load.js"   },
-    { "src": "/api/save",   "dest": "/api/save.js"   },
-    { "src": "/(.*)", "dest": "/index.html" }
+  "rewrites": [
+    { "source": "/api/(.*)", "destination": "/api/$1" },
+    { "source": "/(.*)", "destination": "/index.html" }
+  ],
+  "crons": [
+    {
+      "path": "/api/keep-alive",
+      "schedule": "0 8 */5 * *"
+    }
   ]
 }

@@ -1551,22 +1551,31 @@ const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
 
 async function cloudLoad(id) {
   try {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 10000); // 10 שניות timeout
     const r = await fetch(
       `${SUPABASE_URL}/rest/v1/recipes?id=eq.${encodeURIComponent(id)}&select=data`,
       {
         headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': 'Bearer ' + SUPABASE_ANON_KEY, 'Cache-Control': 'no-cache' },
-        cache: 'no-store'
+        cache: 'no-store',
+        signal: controller.signal
       }
     );
+    clearTimeout(timeout);
     if (!r.ok) throw new Error(`HTTP ${r.status}`);
     const rows = await r.json();
     if (rows?.[0]?.data) return rows[0].data;
-  } catch (e) { console.error(`cloudLoad(${id}):`, e); }
+  } catch (e) {
+    if(e.name === 'AbortError') console.warn(`cloudLoad(${id}): timeout 10s`);
+    else console.error(`cloudLoad(${id}):`, e);
+  }
   return null;
 }
 
 async function cloudSave(id, data) {
   try {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 15000); // 15 שניות timeout
     const r = await fetch(
       `${SUPABASE_URL}/rest/v1/recipes?on_conflict=id`,
       {
@@ -1577,12 +1586,17 @@ async function cloudSave(id, data) {
           'Authorization': 'Bearer ' + SUPABASE_ANON_KEY,
           'Prefer': 'resolution=merge-duplicates'
         },
-        body: JSON.stringify({ id, data, updated_at: new Date().toISOString() })
+        body: JSON.stringify({ id, data, updated_at: new Date().toISOString() }),
+        signal: controller.signal
       }
     );
+    clearTimeout(timeout);
     if (!r.ok) { const t = await r.text(); throw new Error(`HTTP ${r.status}: ${t}`); }
     return true;
-  } catch (e) { console.error(`cloudSave(${id}):`, e); }
+  } catch (e) {
+    if(e.name === 'AbortError') console.warn(`cloudSave(${id}): timeout 15s`);
+    else console.error(`cloudSave(${id}):`, e);
+  }
   return false;
 }
 
@@ -1597,6 +1611,10 @@ function clearCorruptData(){
     localStorage.removeItem('sr_tried');
     localStorage.removeItem('sr_home_slots');
     localStorage.removeItem('sr_gallery');
+    localStorage.removeItem('sr_gallery_order');
+    localStorage.removeItem('sr_gallery_edited');
+    // ניקוי card extras
+    for(let n=1;n<=9;n++) localStorage.removeItem(`card${n}_extra`);
   } catch(e){}
   toast('🗑️ מידע מקומי נמחק — טוען מחדש...');
   setTimeout(() => location.reload(), 1000);
@@ -1819,9 +1837,10 @@ window.addEventListener('DOMContentLoaded', () => {
     if(document.visibilityState === 'visible'){
       // טען מתכונים חדשים מהענן
       const fresh = await loadSRRecipes();
-      if(fresh.length > srRecipes.length){
+      const newCount = fresh.length - srRecipes.length;
+      if(newCount > 0){
         srRecipes = fresh;
-        toast(`🔄 ${fresh.length - srRecipes.length} מתכונים חדשים סונכרנו`);
+        toast(`🔄 ${newCount} מתכונים חדשים סונכרנו`);
         location.reload();
       }
     }
@@ -2514,9 +2533,14 @@ async function savePageData() {
   try {
     const data = collectPageData();
     if(!data.cards || data.cards.length === 0){ console.warn('savePageData: empty'); return; }
+    data._savedAt = Date.now(); // timestamp לזיהוי גרסה חדשה יותר
     const json = JSON.stringify(data);
     try{ localStorage.setItem('sr_page_data', json); }catch(e){}
-    await cloudSave('page_content', json);
+    const cloudOk = await cloudSave('page_content', json);
+    if(!cloudOk){
+      console.warn('⚠️ שמירה לענן נכשלה — נשמר רק מקומית');
+      // אל תציג toast בכל שמירה אוטומטית, רק אם המשתמש שמר ידנית
+    }
   } catch(e){ console.error('savePageData error:', e);
   } finally { isSaving = false; }
 }
@@ -2538,9 +2562,22 @@ async function loadPageData() {
       const cloudData = JSON.parse(cloudJson);
       // קבל מהענן אם יש לפחות כרטיס אחד עם שם
       if(cloudData?.cards?.some(c => c.title && c.title.length > 1)){
-        data = cloudData;
-        source = 'cloud';
-        try{ localStorage.setItem('sr_page_data', cloudJson); }catch(e){}
+        // בדוק timestamp — אם ל-local יש עדכון חדש יותר, אל תדרוס
+        const localTime = data?._savedAt || 0;
+        const cloudTime = cloudData._savedAt || 0;
+        if(localTime > cloudTime && data?.cards?.some(c => c.title && c.title.length > 1)){
+          console.log(`📂 Local חדש יותר (${new Date(localTime).toLocaleString()}) — לא דורסים עם ענן (${cloudTime ? new Date(cloudTime).toLocaleString() : 'ללא timestamp'})`);
+          // ננסה לסנכרן local → cloud ברקע
+          setTimeout(async () => {
+            const json = JSON.stringify(data);
+            const ok = await cloudSave('page_content', json);
+            if(ok) console.log('☁️ סונכרן local → cloud');
+          }, 3000);
+        } else {
+          data = cloudData;
+          source = 'cloud';
+          try{ localStorage.setItem('sr_page_data', cloudJson); }catch(e){}
+        }
       }
     }
   } catch(e) { console.warn('Cloud load error:', e); }
@@ -3012,9 +3049,31 @@ function handleERFile(e){
   if(!file) return;
   const reader = new FileReader();
   reader.onload = ev => {
-    erFileData = ev.target.result;
-    updateERThumbPreview(erFileData);
-    toast('✅ תמונה נטענה!');
+    // דחיסת תמונה כדי שתעבור את מסנן 200KB ב-collectPageData
+    const img = new Image();
+    img.onload = () => {
+      const canvas = document.createElement('canvas');
+      const max = 800; // גדול יותר מתמונות בישול כי זו תמונת כרטיס ראשית
+      let w = img.width, h = img.height;
+      if(w > max || h > max){ const r = Math.min(max/w, max/h); w = Math.round(w*r); h = Math.round(h*r); }
+      canvas.width = w; canvas.height = h;
+      canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+      // נסה quality 0.7, אם עדיין גדול מדי → 0.5, אם עדיין → 0.3
+      let dataUrl = canvas.toDataURL('image/jpeg', 0.7);
+      if(dataUrl.length > 180000) dataUrl = canvas.toDataURL('image/jpeg', 0.5);
+      if(dataUrl.length > 180000) dataUrl = canvas.toDataURL('image/jpeg', 0.3);
+      console.log(`📸 תמונת כרטיס נדחסה: ${(ev.target.result.length/1024).toFixed(0)}KB → ${(dataUrl.length/1024).toFixed(0)}KB`);
+      erFileData = dataUrl;
+      updateERThumbPreview(erFileData);
+      toast('✅ תמונה נטענה ונדחסה!');
+    };
+    img.onerror = () => {
+      // fallback — אם לא הצליח לדחוס, שמור כמו שהוא
+      erFileData = ev.target.result;
+      updateERThumbPreview(erFileData);
+      toast('✅ תמונה נטענה!');
+    };
+    img.src = ev.target.result;
   };
   reader.readAsDataURL(file);
 }
@@ -3421,7 +3480,7 @@ async function saveEditRecipe(){
     // Save extra data for fixed card
     const extraKey = `card${n}_extra`;
     try{ localStorage.setItem(extraKey, JSON.stringify(extraData)); }catch(e){}
-    await cloudSave(extraKey, JSON.stringify(extraData));
+    const extraOk = await cloudSave(extraKey, JSON.stringify(extraData));
     // עדכן cache גלובלי
     if(_loadedCards[n-1]) Object.assign(_loadedCards[n-1], extraData);
     else _loadedCards[n-1] = extraData;
@@ -3429,7 +3488,7 @@ async function saveEditRecipe(){
     dataFullyLoaded = true;
     markChanged();
     await savePageData();
-    toast(`✅ כרטיס ${n} עודכן ונשמר!`);
+    toast(extraOk ? `✅ כרטיס ${n} עודכן ונשמר!` : `⚠️ כרטיס ${n} נשמר מקומית — הענן לא זמין`);
     
   } else {
     const r = srRecipes[idx];
@@ -3640,23 +3699,32 @@ async function saveGalleryOrder(){
 }
 
 async function loadGalleryOrder(){
-  // טען סדר רק אם המשתמש ערך את הגלריה
-  const edited = localStorage.getItem('sr_gallery_edited');
-  if(!edited) return; // לא נערך — השאר מקור
-  
   let order = null;
-  try{
-    const local = localStorage.getItem('sr_gallery_order');
-    if(local) order = JSON.parse(local);
-  }catch(e){}
+  let fromCloud = false;
   
+  // בדוק localStorage קודם
+  const edited = localStorage.getItem('sr_gallery_edited');
+  if(edited){
+    try{
+      const local = localStorage.getItem('sr_gallery_order');
+      if(local) order = JSON.parse(local);
+    }catch(e){}
+  }
+  
+  // תמיד בדוק ענן — יכול להיות מכשיר אחר שערך
   try{
     const cloudJson = await cloudLoad('sr_gallery_order');
     if(cloudJson){
       const cloudOrder = JSON.parse(cloudJson);
-      if(Array.isArray(cloudOrder) && cloudOrder.length > 0) order = cloudOrder;
+      if(Array.isArray(cloudOrder) && cloudOrder.length > 0){
+        order = cloudOrder;
+        fromCloud = true;
+        // סנכרן ל-localStorage כדי שהרענון הבא יהיה מהיר
+        try{ localStorage.setItem('sr_gallery_order', cloudJson); }catch(e){}
+        try{ localStorage.setItem('sr_gallery_edited', 'true'); }catch(e){}
+      }
     }
-  }catch(e){}
+  }catch(e){ console.warn('Gallery cloud load error:', e); }
   
   if(!order || !Array.isArray(order) || order.length === 0) return;
   
@@ -3681,7 +3749,7 @@ async function loadGalleryOrder(){
   // רק אם נשאר לפחות חצי מהמקור — יישם
   if(reordered.length >= _galleryOriginal.length * 0.3){
     galleryItems = reordered;
-    console.log(`📋 Gallery: ${reordered.length}/${_galleryOriginal.length} items restored`);
+    console.log(`📋 Gallery: ${reordered.length}/${_galleryOriginal.length} items restored${fromCloud ? ' (from cloud)' : ''}`);
   } else {
     console.warn(`⚠️ Gallery order mismatch (${reordered.length}/${_galleryOriginal.length}) — using original`);
   }
