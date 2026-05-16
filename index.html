@@ -1699,6 +1699,28 @@ let dataFullyLoaded = false;
 let isSaving = false;
 let _loadedCards = []; // נתוני כרטיסים שנטענו (כולל מצרכים)
 
+// 🔥 שמירת URLs מקוריים מה-HTML — fallback אם הענן שובר תמונות
+let _originalCardSrcs = {};
+(function saveOriginalSrcs(){
+  [1,2,3,4,5,6,7,8,9].forEach(n => {
+    const img = document.getElementById(`card${n}Img`);
+    if(img && img.src && img.src.length > 20){
+      _originalCardSrcs[n] = img.src;
+      // 🔥 onerror חכם: במקום למחוק תמונה, חוזר ל-Cloudinary המקורי
+      img.onerror = function(){
+        const orig = _originalCardSrcs[n];
+        if(orig && this.src !== orig){
+          console.log(`🔄 כרטיס ${n}: תמונה נכשלה, חוזר למקור`);
+          this.src = orig;
+        } else {
+          this.src = '';
+        }
+        this.onerror = null; // מונע לולאה אינסופית
+      };
+    }
+  });
+})();
+
 async function testSaveLoad(){
   const ts = Date.now().toString();
   let results = [];
@@ -2491,10 +2513,12 @@ function collectPageData() {
     // סנן רק base64 ענק מאוד (תמונות מקוריות לא דחוסות)
     if(imgSrc.startsWith('data:') && imgSrc.length > 200000) imgSrc = '';
     
-    // אם ה-DOM ריק (למשל onerror מחק), נסה לשמר את התמונה מהענן
+    // אם ה-DOM ריק (למשל onerror מחק), נסה לשמר את התמונה מהענן או מה-HTML המקורי
     if(!imgSrc || imgSrc.length <= 20){
       if(_loadedCards[n-1] && _loadedCards[n-1].img && _loadedCards[n-1].img.length > 20){
         imgSrc = _loadedCards[n-1].img;
+      } else if(_originalCardSrcs[n]){
+        imgSrc = _originalCardSrcs[n]; // fallback ל-Cloudinary URL מקורי
       }
     }
     
@@ -2617,10 +2641,33 @@ async function loadPageData() {
       const cardEl = document.getElementById(`card${n}`);
       if(!cardEl) return;
       
-      // תמונה — קבל מהענן אם יש, אבל אל תדרוס URL זהה (מונע flicker במובייל)
+      // תמונה — הגנה על Cloudinary URLs מקוריים
       const img = document.getElementById(`card${n}Img`);
       if(img && c.img && c.img.length > 20){
-        if(img.src !== c.img) img.src = c.img;
+        const currentSrc = img.src || '';
+        const originalSrc = _originalCardSrcs[n] || '';
+        const isCurrentCloudinary = currentSrc.includes('cloudinary.com');
+        const isCloudDataURL = c.img.startsWith('http');
+        const isCloudDataBase64 = c.img.startsWith('data:');
+        
+        if(img.src === c.img){
+          // אותו URL — לא צריך לשנות (מונע flicker במובייל)
+        } else if(isCloudDataURL){
+          // ענן מכיל URL רגיל — בטוח להשתמש
+          img.src = c.img;
+          // onerror ישחזר למקור אם נכשל
+          img.onerror = function(){ 
+            if(originalSrc) this.src = originalSrc;
+            else this.src = '';
+            this.onerror = null;
+          };
+        } else if(isCloudDataBase64 && !isCurrentCloudinary){
+          // ענן מכיל base64 והנוכחי לא Cloudinary — להשתמש
+          img.src = c.img;
+        } else if(isCurrentCloudinary){
+          // הנוכחי Cloudinary תקין, ענן מכיל base64 — להעדיף Cloudinary
+          console.log(`🛡️ כרטיס ${n}: שומר Cloudinary URL, מדלג על base64 מהענן`);
+        }
         if(img.style.display !== 'block') img.style.display = 'block';
       }
       
