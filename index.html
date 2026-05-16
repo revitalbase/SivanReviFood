@@ -1802,7 +1802,7 @@ window.addEventListener('DOMContentLoaded', () => {
             const cloudHasExtras = parsed?.cards?.some(c => c?.ingredients || c?.steps);
             if(!cloudHasExtras){
               console.log('🔄 מסנכרן תוכן מתכונים לענן...');
-              setTimeout(() => savePageData(), 2000);
+              setTimeout(() => savePageData(), 10000); // ⏱️ מאריך: נותן לתמונות זמן להיטען במובייל
             }
           }
         }catch(e){}
@@ -2489,18 +2489,17 @@ function collectPageData() {
     const el = document.getElementById(`card${n}Img`);
     let imgSrc = el ? (el.src||'') : '';
     // סנן רק base64 ענק מאוד (תמונות מקוריות לא דחוסות)
-    if(imgSrc.startsWith('data:') && imgSrc.length > 200000){
-      console.warn(`⚠️ כרטיס ${n}: תמונה גדולה מדי (${(imgSrc.length/1024).toFixed(0)}KB) — מנסה card_extra`);
-      imgSrc = '';
+    if(imgSrc.startsWith('data:') && imgSrc.length > 200000) imgSrc = '';
+    
+    // אם ה-DOM ריק (למשל onerror מחק), נסה לשמר את התמונה מהענן
+    if(!imgSrc || imgSrc.length <= 20){
+      if(_loadedCards[n-1] && _loadedCards[n-1].img && _loadedCards[n-1].img.length > 20){
+        imgSrc = _loadedCards[n-1].img;
+      }
     }
     
     let extra = {};
     try{ extra = JSON.parse(localStorage.getItem(`card${n}_extra`) || '{}'); }catch(e){}
-    // fallback — אם התמונה סוננה, נסה לקחת מ-card_extra
-    if(!imgSrc && extra.img && extra.img.length > 20 && extra.img.length <= 200000){
-      imgSrc = extra.img;
-      console.log(`🔄 כרטיס ${n}: תמונה שוחזרה מ-card_extra`);
-    }
     cards.push({
       img:   imgSrc,
       cat:   g(`card${n}Cat`),
@@ -2618,10 +2617,11 @@ async function loadPageData() {
       const cardEl = document.getElementById(`card${n}`);
       if(!cardEl) return;
       
-      // תמונה — קבל מהענן אם יש
+      // תמונה — קבל מהענן אם יש, אבל אל תדרוס URL זהה (מונע flicker במובייל)
       const img = document.getElementById(`card${n}Img`);
       if(img && c.img && c.img.length > 20){
-        img.src = c.img; img.style.display = 'block';
+        if(img.src !== c.img) img.src = c.img;
+        if(img.style.display !== 'block') img.style.display = 'block';
       }
       
       // טקסט — עדכן רק אם יש ערך אמיתי בענן
@@ -2644,35 +2644,6 @@ async function loadPageData() {
         };
         try{ localStorage.setItem(`card${n}_extra`, JSON.stringify(extra)); }catch(e){}
       }
-    });
-    
-    // fallback — אם תמונת כרטיס ריקה ב-page_content, נסה לשחזר מ-card_extra
-    data.cards.forEach((c, i) => {
-      const n = i + 1;
-      const img = document.getElementById(`card${n}Img`);
-      if(!img || (c.img && c.img.length > 20)) return; // כבר יש תמונה
-      // נסה localStorage קודם (מהיר)
-      try {
-        const localExtra = JSON.parse(localStorage.getItem(`card${n}_extra`) || '{}');
-        if(localExtra.img && localExtra.img.length > 20){
-          img.src = localExtra.img; img.style.display = 'block';
-          console.log(`🔄 כרטיס ${n}: תמונה שוחזרה מ-card_extra (local)`);
-          if(_loadedCards[n-1]) _loadedCards[n-1].img = localExtra.img;
-          return;
-        }
-      } catch(e){}
-      // נסה ענן ברקע
-      cloudLoad(`card${n}_extra`).then(json => {
-        if(!json) return;
-        try {
-          const ce = JSON.parse(json);
-          if(ce.img && ce.img.length > 20){
-            img.src = ce.img; img.style.display = 'block';
-            console.log(`🔄 כרטיס ${n}: תמונה שוחזרה מ-card_extra (cloud)`);
-            if(_loadedCards[n-1]) _loadedCards[n-1].img = ce.img;
-          }
-        } catch(e){}
-      }).catch(()=>{});
     });
   }
 
@@ -3086,35 +3057,29 @@ function handleERFile(e){
   if(!file) return;
   const reader = new FileReader();
   reader.onload = ev => {
-    // דחיסת תמונה — לולאה אגרסיבית שמבטיחה תוצאה מתחת ל-150KB
+    // דחיסת תמונה כדי שתעבור את מסנן 200KB ב-collectPageData
     const img = new Image();
     img.onload = () => {
       const canvas = document.createElement('canvas');
-      const TARGET = 150000; // יעד בטוח — הרבה מתחת לסף 200K של collectPageData
-      const sizes = [800, 600, 400]; // ננסה גדלים יורדים
-      const qualities = [0.7, 0.5, 0.35, 0.2]; // ננסה איכויות יורדות
-      let dataUrl = '';
-      
-      for(const maxDim of sizes){
-        let w = img.width, h = img.height;
-        if(w > maxDim || h > maxDim){ const r = Math.min(maxDim/w, maxDim/h); w = Math.round(w*r); h = Math.round(h*r); }
-        canvas.width = w; canvas.height = h;
-        canvas.getContext('2d').drawImage(img, 0, 0, w, h);
-        for(const q of qualities){
-          dataUrl = canvas.toDataURL('image/jpeg', q);
-          if(dataUrl.length <= TARGET) break;
-        }
-        if(dataUrl.length <= TARGET) break;
-      }
-      
+      const max = 800; // גדול יותר מתמונות בישול כי זו תמונת כרטיס ראשית
+      let w = img.width, h = img.height;
+      if(w > max || h > max){ const r = Math.min(max/w, max/h); w = Math.round(w*r); h = Math.round(h*r); }
+      canvas.width = w; canvas.height = h;
+      canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+      // נסה quality 0.7, אם עדיין גדול מדי → 0.5, אם עדיין → 0.3
+      let dataUrl = canvas.toDataURL('image/jpeg', 0.7);
+      if(dataUrl.length > 180000) dataUrl = canvas.toDataURL('image/jpeg', 0.5);
+      if(dataUrl.length > 180000) dataUrl = canvas.toDataURL('image/jpeg', 0.3);
       console.log(`📸 תמונת כרטיס נדחסה: ${(ev.target.result.length/1024).toFixed(0)}KB → ${(dataUrl.length/1024).toFixed(0)}KB`);
       erFileData = dataUrl;
       updateERThumbPreview(erFileData);
       toast('✅ תמונה נטענה ונדחסה!');
     };
     img.onerror = () => {
-      // fallback — תמונה לא תקינה, לא שומרים base64 ענק
-      toast('❌ לא הצלחנו לטעון את התמונה — נסי קובץ אחר');
+      // fallback — אם לא הצליח לדחוס, שמור כמו שהוא
+      erFileData = ev.target.result;
+      updateERThumbPreview(erFileData);
+      toast('✅ תמונה נטענה!');
     };
     img.src = ev.target.result;
   };
@@ -3520,19 +3485,13 @@ async function saveEditRecipe(){
     document.getElementById(`card${n}`).style.display = 'flex';
     if(!homeSlots.includes(n)){ homeSlots.push(n); homeSlots.sort((a,b)=>a-b); await saveHomeSlots(); }
     
-    // Save extra data for fixed card — כולל תמונה כגיבוי
+    // Save extra data for fixed card
     const extraKey = `card${n}_extra`;
-    if(finalImg && finalImg.length > 20) extraData.img = finalImg;
-    try{ localStorage.setItem(extraKey, JSON.stringify(extraData)); }catch(e){
-      // אם localStorage מלא, נסה בלי תמונה
-      const lite = {...extraData}; delete lite.img;
-      try{ localStorage.setItem(extraKey, JSON.stringify(lite)); }catch(e2){}
-    }
+    try{ localStorage.setItem(extraKey, JSON.stringify(extraData)); }catch(e){}
     const extraOk = await cloudSave(extraKey, JSON.stringify(extraData));
-    // עדכן cache גלובלי — כולל תמונה
-    const cardUpdate = {...extraData, img: finalImg || ''};
-    if(_loadedCards[n-1]) Object.assign(_loadedCards[n-1], cardUpdate);
-    else _loadedCards[n-1] = cardUpdate;
+    // עדכן cache גלובלי
+    if(_loadedCards[n-1]) Object.assign(_loadedCards[n-1], extraData);
+    else _loadedCards[n-1] = extraData;
     
     dataFullyLoaded = true;
     markChanged();
@@ -3692,16 +3651,32 @@ let _wasDragging = false;
 let _galleryOriginal = []; // עותק מקורי של הגלריה
 
 function getGalleryHash(item){
-  // hash קצר לזיהוי פריט
-  return item.src.substring(item.src.indexOf(',') + 1, item.src.indexOf(',') + 30);
+  if(!item || !item.src) return '';
+  const src = item.src;
+  // URL רגיל — מחזיר כמו שהוא
+  if(!src.startsWith('data:')) return src;
+  // base64: אורך + 20 תווים מההתחלה + 20 מהסוף — מונע hash collisions
+  const len = src.length;
+  const start = src.substring(src.indexOf(',') + 1, src.indexOf(',') + 21);
+  const end = src.substring(len - 20, len);
+  return `${len}_${start}_${end}`;
 }
 
-function deleteGalleryItem(idx){
+async function deleteGalleryItem(idx){
   if(!confirm('למחוק את התמונה הזו מהגלריה?')) return;
-  galleryItems.splice(idx, 1);
+  const removedItem = galleryItems.splice(idx, 1)[0];
   renderGallery();
-  saveGalleryOrder();
-  toast(`🗑️ נמחק! (נשארו ${galleryItems.length} פריטים)`);
+  toast('⏳ שומר מחיקה...');
+  // מחכים שהשמירה תסתיים — מונע race condition ברענון
+  const success = await saveGalleryOrder();
+  if(success){
+    toast(`🗑️ נמחק! (נשארו ${galleryItems.length} פריטים)`);
+  } else {
+    // השמירה נכשלה — מחזירים את הפריט
+    galleryItems.splice(idx, 0, removedItem);
+    renderGallery();
+    toast('❌ השמירה נכשלה. נסי שוב.');
+  }
 }
 
 function galleryDragStart(e, idx){
@@ -3718,7 +3693,7 @@ function galleryDragOver(e){
   e.currentTarget.style.outlineOffset = '-3px';
 }
 
-function galleryDrop(e, dropIdx){
+async function galleryDrop(e, dropIdx){
   e.preventDefault();
   e.currentTarget.style.outline = '';
   if(_dragIdx === -1 || _dragIdx === dropIdx) return;
@@ -3727,7 +3702,7 @@ function galleryDrop(e, dropIdx){
   galleryItems[dropIdx] = temp;
   _dragIdx = -1;
   renderGallery();
-  saveGalleryOrder();
+  await saveGalleryOrder();
   toast('🔄 סדר עודכן');
 }
 
@@ -3741,10 +3716,12 @@ function galleryDragEnd(e){
 
 async function saveGalleryOrder(){
   const order = galleryItems.map(item => getGalleryHash(item));
-  try{ localStorage.setItem('sr_gallery_order', JSON.stringify(order)); }catch(e){}
-  try{ localStorage.setItem('sr_gallery_edited', 'true'); }catch(e){}
-  await cloudSave('sr_gallery_order', JSON.stringify(order));
-  console.log(`💾 Gallery order saved: ${order.length} items`);
+  let localOk = false;
+  let cloudOk = false;
+  try{ localStorage.setItem('sr_gallery_order', JSON.stringify(order)); localStorage.setItem('sr_gallery_edited', 'true'); localOk = true; }catch(e){}
+  cloudOk = await cloudSave('sr_gallery_order', JSON.stringify(order));
+  console.log(`💾 Gallery order saved: ${order.length} items. Local: ${localOk}, Cloud: ${cloudOk}`);
+  return cloudOk || localOk;
 }
 
 async function loadGalleryOrder(){
@@ -3795,8 +3772,8 @@ async function loadGalleryOrder(){
     }
   });
   
-  // רק אם נשאר לפחות חצי מהמקור — יישם
-  if(reordered.length >= _galleryOriginal.length * 0.3){
+  // יישם סדר שמור — מאפשר מחיקות לגיטימיות (גם אם נמחק הרבה)
+  if(reordered.length > 0 || order.length === 0){
     galleryItems = reordered;
     console.log(`📋 Gallery: ${reordered.length}/${_galleryOriginal.length} items restored${fromCloud ? ' (from cloud)' : ''}`);
   } else {
