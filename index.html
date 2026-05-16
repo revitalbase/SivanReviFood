@@ -177,10 +177,10 @@ body { font-family: 'Heebo', sans-serif; background: var(--cream); color: var(--
 .section-title em { color: var(--gold); font-style: italic; }
 .section-link { font-size: 12px; color: var(--gold); text-decoration: none; }
 .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; }
-.card { background: #fff; border: 0.5px solid var(--border); overflow: hidden; cursor: pointer; transition: .25s; }
+.card { background: #fff; border: 0.5px solid var(--border); overflow: hidden; cursor: pointer; transition: .25s; display: flex; flex-direction: column; }
 .card:hover { transform: translateY(-3px); }
-.card-img { height: 200px; position: relative; overflow: hidden; }
-.card-img img { width: 100%; height: 100%; object-fit: cover; display: block; transition: .35s; }
+.card-img { height: 200px; min-height: 200px; position: relative; overflow: hidden; flex-shrink: 0; }
+.card-img img { width: 100%; height: 100%; min-height: 200px; object-fit: cover; display: block; transition: .35s; }
 .card:hover .card-img img { transform: scale(1.04); }
 .card-accent { position: absolute; bottom: 0; left: 0; right: 0; height: 3px; background: var(--gold); }
 .card-body { padding: 18px; }
@@ -665,15 +665,15 @@ body { font-family: 'Heebo', sans-serif; background: var(--cream); color: var(--
   .section-title { font-size: 22px; }
   .grid { grid-template-columns: repeat(2, 1fr); gap: 10px; }
   .home-grid { grid-template-columns: repeat(2, 1fr); gap: 10px; }
-  .card-img { height: 140px; min-height: 140px; }
-  .card-img img { min-height: 100%; }
-  .card-body { padding: 8px 10px; }
+  .card-img { height: 140px; min-height: 140px; flex-shrink: 0; }
+  .card-img img { min-height: 140px; }
+  .card-body { padding: 8px 10px; flex-shrink: 1; overflow: hidden; }
   .card-title { font-size: 13px; cursor: pointer; color: var(--gold); text-decoration: underline; text-decoration-color: rgba(201,169,110,.3); text-underline-offset: 2px; }
   .card-cat { font-size: 8px; }
   .card-who { font-size: 10px; }
   .card-stars { gap: 2px; }
   .star-rating span { font-size: 14px; }
-  .card-bottom { padding: 6px 10px; }
+  .card-bottom { padding: 6px 10px; flex-shrink: 0; overflow: hidden; flex-wrap: wrap; }
   .tried-toggle button { font-size: 11px; padding: 4px 8px; }
   .card-edit-btn { width: 26px; height: 26px; font-size: 11px; }
   .card-home-btn { width: 22px; height: 22px; font-size: 10px; }
