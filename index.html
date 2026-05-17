@@ -1697,7 +1697,8 @@ async function pushAllToCloud(){
 // ── בדיקת שמירה/טעינה ──
 let dataFullyLoaded = false;
 let isSaving = false;
-let _loadedCards = []; // נתוני כרטיסים שנטענו (כולל מצרכים)
+let _loadedCards = [];
+let _needsSyncToCloud = false; // flag: HTML images need to be pushed to Supabase // נתוני כרטיסים שנטענו (כולל מצרכים)
 
 // 🔥 שמירת URLs מקוריים מה-HTML — fallback אם הענן שובר תמונות
 let _originalCardSrcs = {};
@@ -1810,6 +1811,13 @@ window.addEventListener('DOMContentLoaded', () => {
       
       console.log('✅ כל הנתונים נטענו');
       dataFullyLoaded = true;
+      
+      // 🔥 אם תמונות מה-HTML שונות מהענן — דחוף לענן מיד
+      if(_needsSyncToCloud){
+        console.log('🔄 דוחף תמונות HTML לענן...');
+        setTimeout(() => savePageData(), 2000);
+        _needsSyncToCloud = false;
+      }
       
       // סנכרן תוכן מתכונים לענן (כדי שמובייל יראה)
       const localHasExtras = [1,2,3,4,5,6,7,8,9].some(n => {
@@ -2641,34 +2649,34 @@ async function loadPageData() {
       const cardEl = document.getElementById(`card${n}`);
       if(!cardEl) return;
       
-      // תמונה — הגנה על Cloudinary URLs מקוריים
+      // תמונה — HTML הוא source of truth, לא דורסים עם ענן ישן
       const img = document.getElementById(`card${n}Img`);
+      const originalSrc = _originalCardSrcs[n] || '';
       if(img && c.img && c.img.length > 20){
-        const currentSrc = img.src || '';
-        const originalSrc = _originalCardSrcs[n] || '';
-        const isCurrentCloudinary = currentSrc.includes('cloudinary.com');
-        const isCloudDataURL = c.img.startsWith('http');
-        const isCloudDataBase64 = c.img.startsWith('data:');
-        
-        if(img.src === c.img){
-          // אותו URL — לא צריך לשנות (מונע flicker במובייל)
-        } else if(isCloudDataURL){
-          // ענן מכיל URL רגיל — בטוח להשתמש
+        // אם ה-HTML כבר מכיל תמונה תקינה — שומרים אותה, לא דורסים
+        if(originalSrc && originalSrc.length > 20 && img.src === originalSrc){
+          // HTML image = source of truth. אם הענן שונה, נעדכן את הענן
+          if(c.img !== originalSrc){
+            console.log(`🛡️ כרטיס ${n}: שומר תמונה מ-HTML, מעדכן ענן`);
+            c.img = originalSrc; // עדכן בנתונים כדי שה-save הבא ידחוף לענן
+            _needsSyncToCloud = true;
+          }
+        } else if(img.src === c.img){
+          // אותו URL — לא צריך לשנות
+        } else if(c.img.startsWith('http')){
           img.src = c.img;
-          // onerror ישחזר למקור אם נכשל
           img.onerror = function(){ 
             if(originalSrc) this.src = originalSrc;
             else this.src = '';
             this.onerror = null;
           };
-        } else if(isCloudDataBase64 && !isCurrentCloudinary){
-          // ענן מכיל base64 והנוכחי לא Cloudinary — להשתמש
-          img.src = c.img;
-        } else if(isCurrentCloudinary){
-          // הנוכחי Cloudinary תקין, ענן מכיל base64 — להעדיף Cloudinary
-          console.log(`🛡️ כרטיס ${n}: שומר Cloudinary URL, מדלג על base64 מהענן`);
         }
         if(img.style.display !== 'block') img.style.display = 'block';
+      }
+      // אם ה-HTML מכיל תמונה אבל הענן לא — דחוף לענן
+      if(originalSrc && originalSrc.length > 20 && (!c.img || c.img.length <= 20)){
+        c.img = originalSrc;
+        _needsSyncToCloud = true;
       }
       
       // טקסט — עדכן רק אם יש ערך אמיתי בענן
