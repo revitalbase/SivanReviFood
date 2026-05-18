@@ -457,8 +457,6 @@ body { font-family: 'Heebo', sans-serif; background: var(--cream); color: var(--
   gap: 14px;
   padding: 0 40px;
   overflow-x: auto;
-  scroll-behavior: smooth;
-  scroll-snap-type: x mandatory;
   -webkit-overflow-scrolling: touch;
   -ms-overflow-style: none;
   scrollbar-width: none;
@@ -473,7 +471,7 @@ body { font-family: 'Heebo', sans-serif; background: var(--cream); color: var(--
   border-radius: 12px;
   overflow: hidden;
   position: relative;
-  scroll-snap-align: start;
+  scroll-snap-align: none;
   background: #2a2a2a;
   transition: transform .3s ease, box-shadow .3s ease;
 }
@@ -3650,8 +3648,7 @@ let galleryItems = [
 
 let galPendingFiles = [];
 let currentLbIndex = 0;
-let galleryAutoTimer = null;
-const GALLERY_AUTO_INTERVAL = 5000; // 5 שניות בין תמונות — כמו מצגת
+// gallery auto-scroll handled by requestAnimationFrame
 
 async function loadGalleryItems(){
   try{
@@ -3864,32 +3861,45 @@ function renderGallery(){
   </button>`;
   track.innerHTML = html;
   updateGalleryDots();
+  
+  // עצירת גלילה אוטומטית בנגיעה/hover, חידוש כשעוזבים
+  track.addEventListener('mouseenter', () => { galleryPaused = true; });
+  track.addEventListener('mouseleave', () => { galleryPaused = false; });
+  track.addEventListener('touchstart', () => { galleryPaused = true; }, {passive:true});
+  track.addEventListener('touchend', () => { setTimeout(()=>{ galleryPaused = false; }, 2000); }, {passive:true});
 }
 
-// ── Auto-advance ──
+const GALLERY_SPEED = 0.5; // פיקסלים לפריים — ככל שנמוך יותר, איטי יותר
+let galleryAnimFrame = null;
+let galleryPaused = false;
+
+// ── Auto-advance — גלילה רציפה ואיטית ──
 function startGalleryAuto(){
   stopGalleryAuto();
-  galleryAutoTimer = setInterval(galleryAutoAdvance, GALLERY_AUTO_INTERVAL);
+  galleryPaused = false;
+  function step(){
+    if(galleryPaused){ galleryAnimFrame = requestAnimationFrame(step); return; }
+    const track = document.getElementById('galleryTrack');
+    if(!track){ galleryAnimFrame = requestAnimationFrame(step); return; }
+    const maxScroll = track.scrollWidth - track.clientWidth;
+    if(maxScroll <= 0){ galleryAnimFrame = requestAnimationFrame(step); return; }
+    
+    track.scrollLeft += GALLERY_SPEED;
+    
+    // כשמגיעים לסוף — חזרה להתחלה בצורה חלקה
+    if(track.scrollLeft >= maxScroll - 1){
+      track.scrollLeft = 0;
+    }
+    
+    galleryAnimFrame = requestAnimationFrame(step);
+  }
+  galleryAnimFrame = requestAnimationFrame(step);
 }
 function stopGalleryAuto(){
-  if(galleryAutoTimer){ clearInterval(galleryAutoTimer); galleryAutoTimer = null; }
+  if(galleryAnimFrame){ cancelAnimationFrame(galleryAnimFrame); galleryAnimFrame = null; }
 }
 function galleryAutoAdvance(){
-  const track = document.getElementById('galleryTrack');
-  if(!track) return;
-  const itemW = track.querySelector('.gallery-item')?.offsetWidth || 320;
-  const gap = 14;
-  const maxScroll = track.scrollWidth - track.clientWidth;
-  // If at end, go back to start
-  if(track.scrollLeft >= maxScroll - 10){
-    track.scrollTo({left: 0, behavior: 'smooth'});
-  } else {
-    track.scrollBy({left: itemW + gap, behavior: 'smooth'});
-  }
-  setTimeout(()=>{
-    syncGalleryDots();
-    checkVisibleVideos();
-  }, 500);
+  // kept for compatibility — startGalleryAuto handles everything now
 }
 
 // ── Video autoplay on visible ──
@@ -3906,13 +3916,11 @@ function checkVisibleVideos(){
       if(vid.paused){
         vid.currentTime = 0;
         vid.play().catch(()=>{});
-        // When video ends, advance to next
         vid.onended = () => {
           vid.onended = null;
-          galleryAutoAdvance();
+          galleryPaused = false; // חדש video — מחדש גלילה
         };
-        // Pause auto-timer while video plays
-        stopGalleryAuto();
+        galleryPaused = true; // עוצר גלילה בזמן וידאו
       }
     } else {
       if(!vid.paused){
@@ -3922,9 +3930,8 @@ function checkVisibleVideos(){
       }
     }
   });
-  // Restart auto if no video is playing
   const anyPlaying = Array.from(track.querySelectorAll('video')).some(v=>!v.paused);
-  if(!anyPlaying && !galleryAutoTimer) startGalleryAuto();
+  if(!anyPlaying) galleryPaused = false;
 }
 
 function updateGalleryDots(){
@@ -3946,11 +3953,14 @@ function updateGalleryDots(){
 function galleryScroll(dir){
   const track = document.getElementById('galleryTrack');
   if(!track) return;
+  galleryPaused = true; // עוצר בזמן גלילה ידנית
   const itemW = track.querySelector('.gallery-item')?.offsetWidth || 320;
   track.scrollBy({left: dir*(itemW+14)*2, behavior:'smooth'});
-  setTimeout(()=>{syncGalleryDots();checkVisibleVideos();},500);
-  // Reset auto timer on manual scroll
-  startGalleryAuto();
+  setTimeout(()=>{
+    syncGalleryDots();
+    checkVisibleVideos();
+    galleryPaused = false; // מחדש אחרי גלילה ידנית
+  }, 800);
 }
 
 function galleryGoPage(page){
