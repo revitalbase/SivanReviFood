@@ -3661,6 +3661,16 @@ let currentLbIndex = 0;
 // gallery auto-scroll handled by requestAnimationFrame
 
 async function loadGalleryItems(){
+  // ניקוי gallery order ישן (פורמט hash השתנה)
+  try{
+    const ver = localStorage.getItem('sr_gallery_ver');
+    if(ver !== '2'){
+      localStorage.removeItem('sr_gallery_order');
+      localStorage.removeItem('sr_gallery_edited');
+      localStorage.setItem('sr_gallery_ver', '2');
+      console.log('🔄 Gallery: cleared old order (hash format changed)');
+    }
+  }catch(e){}
   try{
     const local = localStorage.getItem('sr_gallery');
     if(local){
