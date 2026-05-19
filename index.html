@@ -1697,7 +1697,14 @@ async function pushAllToCloud(){
 // ── בדיקת שמירה/טעינה ──
 let dataFullyLoaded = false;
 let isSaving = false;
-let _loadedCards = []; // נתוני כרטיסים שנטענו (כולל מצרכים)
+let _loadedCards = [];
+
+// 🔥 טביעת אצבע: שומר URLs מקוריים מה-HTML לפני שהענן דורס אותם
+window._originalCardSrcs = {};
+[1,2,3,4,5,6,7,8,9].forEach(n => {
+  const img = document.getElementById(`card${n}Img`);
+  if(img) window._originalCardSrcs[n] = img.getAttribute('src') || '';
+});
 
 async function testSaveLoad(){
   const ts = Date.now().toString();
@@ -1819,6 +1826,19 @@ window.addEventListener('DOMContentLoaded', () => {
           try{ if(exJson) localStorage.setItem(`card${n}_extra`, exJson); }catch(e){}
         }
       }catch(e){}
+
+      // 🔍 Debug: סטטוס אחרי טעינה
+      setTimeout(() => {
+        console.group('🔍 Debug סטטוס שמירה');
+        console.log('_needsCloudSync:', !!window._needsCloudSync);
+        [1,6].forEach(n => {
+          const img = document.getElementById(`card${n}Img`);
+          console.log(`Card ${n} DOM src: ${img?.src?.substring(0,40)}...`);
+          console.log(`Card ${n} HTML attr: ${img?.getAttribute('src')?.substring(0,40)}...`);
+        });
+        console.log(`Gallery items: ${galleryItems.length}`);
+        console.groupEnd();
+      }, 3000);
       
     } catch(e) {
       console.error('❌ שגיאה בטעינת נתונים:', e);
@@ -2492,13 +2512,18 @@ function collectPageData() {
   [1,2,3,4,5,6,7,8,9].forEach(n => {
     const el = document.getElementById(`card${n}Img`);
     let imgSrc = el ? (el.src||'') : '';
-    // סנן רק base64 ענק מאוד (תמונות מקוריות לא דחוסות)
-    if(imgSrc.startsWith('data:') && imgSrc.length > 200000) imgSrc = '';
+    // 🔥 הסרנו מגבלת 200KB שמחקה תמונות! מגבלה חדשה: 3MB
+    if(imgSrc.startsWith('data:') && imgSrc.length > 3000000){
+      console.warn(`כרטיס ${n}: תמונה כבדה מאוד (${(imgSrc.length/1024).toFixed(0)}KB)`);
+    }
+    // שומרים טביעת אצבע של HTML המקורי
+    const originalHtmlSrc = window._originalCardSrcs ? (window._originalCardSrcs[n] || '') : '';
     
     let extra = {};
     try{ extra = JSON.parse(localStorage.getItem(`card${n}_extra`) || '{}'); }catch(e){}
     cards.push({
       img:   imgSrc,
+      html_src: originalHtmlSrc,
       cat:   g(`card${n}Cat`),
       title: g(`card${n}Title`),
       who:   g(`card${n}Who`),
@@ -2614,15 +2639,16 @@ async function loadPageData() {
       const cardEl = document.getElementById(`card${n}`);
       if(!cardEl) return;
       
-      // תמונה — HTML מנצח ענן ישן
+      // תמונה — טביעת אצבע לזיהוי deploy חדש
       const img = document.getElementById(`card${n}Img`);
       if(img && c.img && c.img.length > 20){
         const currentHtmlSrc = img.getAttribute('src') || '';
-        if(currentHtmlSrc.startsWith('data:') && c.img.startsWith('http')){
+        // בדיקה: האם ה-HTML השתנה מאז השמירה האחרונה? (deploy חדש)
+        if(c.html_src && currentHtmlSrc !== c.html_src && currentHtmlSrc.length > 20){
+          console.log(`Card ${n}: Deploy חדש זוהה! HTML מנצח ענן.`);
           window._needsCloudSync = true;
-          console.log(`Card ${n}: HTML image wins over cloud. Triggering sync.`);
         } else {
-          img.src = c.img;
+          if(img.src !== c.img) img.src = c.img;
         }
         img.style.display = 'block';
       }
@@ -3602,6 +3628,15 @@ let galleryAutoTimer = null;
 const GALLERY_AUTO_INTERVAL = 5000; // 5 שניות בין תמונות — כמו מצגת
 
 async function loadGalleryItems(){
+  // ניקוי gallery order ישן (פורמט hash השתנה)
+  try{
+    if(localStorage.getItem('sr_gallery_hash_v') !== '3'){
+      localStorage.removeItem('sr_gallery_order');
+      localStorage.removeItem('sr_gallery_edited');
+      localStorage.setItem('sr_gallery_hash_v', '3');
+      console.log('🔄 Gallery: cleared old order (hash format v3)');
+    }
+  }catch(e){}
   try{
     const local = localStorage.getItem('sr_gallery');
     if(local){
@@ -3654,16 +3689,28 @@ let _wasDragging = false;
 let _galleryOriginal = []; // עותק מקורי של הגלריה
 
 function getGalleryHash(item){
-  // hash קצר לזיהוי פריט
-  return item.src.substring(item.src.indexOf(',') + 1, item.src.indexOf(',') + 30);
+  if(!item || !item.src) return '';
+  const src = item.src;
+  if(!src.startsWith('data:')) return src.substring(0, 50);
+  const len = src.length;
+  const start = src.substring(src.indexOf(',') + 1, src.indexOf(',') + 31);
+  const end = src.substring(len - 30);
+  return `hash_${len}_${start}_${end}`;
 }
 
-function deleteGalleryItem(idx){
+async function deleteGalleryItem(idx){
   if(!confirm('למחוק את התמונה הזו מהגלריה?')) return;
+  console.log(`[Debug] מוחק פריט ${idx}. סה"כ לפני: ${galleryItems.length}`);
   galleryItems.splice(idx, 1);
   renderGallery();
-  saveGalleryOrder();
-  toast(`🗑️ נמחק! (נשארו ${galleryItems.length} פריטים)`);
+  try {
+    await saveGalleryOrder();
+    console.log(`[Debug] מחיקה נשמרה. סה"כ אחרי: ${galleryItems.length}`);
+    toast(`🗑️ נמחק! (נשארו ${galleryItems.length} פריטים)`);
+  } catch(e) {
+    console.error('[Debug] שגיאה בשמירת מחיקה:', e);
+    toast('❌ השמירה נכשלה');
+  }
 }
 
 function galleryDragStart(e, idx){
