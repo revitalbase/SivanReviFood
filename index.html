@@ -4044,17 +4044,23 @@ function handleGalDrop(e){
   document.getElementById('galImgDrop').classList.remove('drag-on');
   processGalFiles(Array.from(e.dataTransfer.files));
 }
+let galProcessing = 0; // מונה קבצים בעיבוד
+
 function processGalFiles(files){
   const area = document.getElementById('galPreviewArea');
   const ph = document.getElementById('galDropPlaceholder');
+  const saveBtn = document.querySelector('.btn-save-modal');
+  
   files.forEach(file => {
     if(!file.type.startsWith('image/') && !file.type.startsWith('video/')) return;
     const type = file.type.startsWith('video') ? 'video' : 'image';
+    galProcessing++;
+    if(saveBtn) saveBtn.textContent = `⏳ מעבד ${galProcessing} קבצים...`;
+    
     const reader = new FileReader();
     reader.onload = ev => {
       const dataUrl = ev.target.result;
       if(type === 'image'){
-        // 🔥 דחיסה אוטומטית לתמונות גלריה
         const img = new Image();
         img.onload = () => {
           const canvas = document.createElement('canvas');
@@ -4072,22 +4078,36 @@ function processGalFiles(files){
           galPendingFiles.push({type:'image', src: compressed});
           area.style.display = 'flex'; ph.style.display = 'none';
           area.innerHTML += `<img src="${compressed}" style="width:70px;height:70px;object-fit:cover;border-radius:6px" />`;
+          galProcessing--;
+          if(galProcessing <= 0 && saveBtn) saveBtn.textContent = '✨ הוסיפי לגלריה';
         };
         img.onerror = () => {
+          galProcessing--;
+          if(galProcessing <= 0 && saveBtn) saveBtn.textContent = '✨ הוסיפי לגלריה';
           toast('❌ לא הצלחנו לטעון את התמונה');
         };
         img.src = dataUrl;
       } else {
-        // וידאו — נשמר כמו שהוא (דחיסת וידאו דורשת שרת)
         galPendingFiles.push({type, src: dataUrl});
         area.style.display = 'flex'; ph.style.display = 'none';
         area.innerHTML += `<div style="width:70px;height:70px;background:#222;border-radius:6px;display:flex;align-items:center;justify-content:center;color:#fff;font-size:20px">▶</div>`;
+        galProcessing--;
+        if(galProcessing <= 0 && saveBtn) saveBtn.textContent = '✨ הוסיפי לגלריה';
       }
+    };
+    reader.onerror = () => {
+      galProcessing--;
+      if(galProcessing <= 0 && saveBtn) saveBtn.textContent = '✨ הוסיפי לגלריה';
+      toast('❌ שגיאה בקריאת הקובץ');
     };
     reader.readAsDataURL(file);
   });
 }
 async function saveGalleryItems(){
+  if(galProcessing > 0){
+    toast('⏳ עדיין מעבד תמונות, חכי רגע...');
+    return;
+  }
   const url = document.getElementById('galUrlIn').value.trim();
   let newItems = [...galPendingFiles];
   if(url){
@@ -4095,8 +4115,11 @@ async function saveGalleryItems(){
     newItems.push({type: isVideo ? 'video' : 'image', src: url});
   }
   if(!newItems.length){ toast('❗ הוסיפי תמונה או לינק'); return; }
+  toast('⏳ שומר...');
   galleryItems = galleryItems.concat(newItems);
   await saveGalleryExtra(newItems);
+  // עדכון gallery order בענן
+  await saveGalleryOrder();
   renderGallery();
   closeGalleryAdd();
   startGalleryAuto();
